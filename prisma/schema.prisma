@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Analyst {
+  id        String    @id @default(cuid())
+  name      String
+  initials  String
+  role      String    @default("Analyst")
+  color     Int       @default(0)
+  mood      String    @default("m")
+  pending   Boolean   @default(false)
+  joinDate  DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  notes    Note[]
+  meetings MeetingAnalyst[]
+  todos    Todo[]
+  projects ProjectAnalyst[]
+}
+
+model Note {
+  id           String   @id @default(cuid())
+  text         String
+  date         DateTime @default(now())
+  mood         String
+  source       String   @default("manual")
+  meetingTitle String?
+  analystId    String
+  analyst      Analyst  @relation(fields: [analystId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+}
+
+model Meeting {
+  id        String   @id @default(cuid())
+  title     String
+  date      DateTime
+  notes     String
+  digest    Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analysts MeetingAnalyst[]
+}
+
+model MeetingAnalyst {
+  meetingId  String
+  analystId  String
+  meeting    Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  analyst    Analyst @relation(fields: [analystId], references: [id], onDelete: Cascade)
+
+  @@id([meetingId, analystId])
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   @default("google")
+  status    String   @default("active")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analysts ProjectAnalyst[]
+}
+
+model ProjectAnalyst {
+  projectId String
+  analystId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analyst   Analyst @relation(fields: [analystId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, analystId])
+}
+
+model Todo {
+  id          String    @id @default(cuid())
+  text        String
+  analystId   String?
+  analyst     Analyst?  @relation(fields: [analystId], references: [id], onDelete: SetNull)
+  priority    String    @default("normal")
+  done        Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+}
