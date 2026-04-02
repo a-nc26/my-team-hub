@@ -13,7 +13,7 @@ export async function POST(req) {
     const body = await req.json()
     const client = new Anthropic({ apiKey: key })
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1024,
       system: body.systemPrompt || 'You are a helpful management coach.',
       messages: body.messages || [],

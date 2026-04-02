@@ -43,12 +43,14 @@ Rules:
 - If nothing found for a category, return an empty array`
 
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 1500,
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const raw = response.content[0].text.trim()
+    let raw = response.content[0].text.trim()
+    // Strip markdown code fences if present
+    raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
     const parsed = JSON.parse(raw)
     return NextResponse.json(parsed)
   } catch (e) {
