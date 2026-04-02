@@ -66,6 +66,16 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
 export default function ProjectsTab({ projects, setProjects, analysts, loading, showToast }) {
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [confirmDelete, setConfirmDelete] = useState(null)
+
+  async function handleDelete(id) {
+    try {
+      const res = await fetch(`/api/projects/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete project')
+      setProjects(prev => prev.filter(p => p.id !== id))
+      setConfirmDelete(null)
+    } catch (e) { showToast(e.message) }
+  }
 
   async function handleCreate(data) {
     try {
@@ -116,7 +126,18 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
                   <span className="project-name">{p.name}</span>
                   <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>{p.type === 'google' ? 'Google' : 'Side'}</span>
                   <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>{STATUS_LABELS[p.status] || p.status}</span>
-                  <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }} onClick={() => setEditing(p)}>Edit</button>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditing(p)}>Edit</button>
+                    {confirmDelete === p.id ? (
+                      <>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
+                        <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                      </>
+                    ) : (
+                      <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
+                        onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
+                    )}
+                  </div>
                 </div>
                 {p.analysts?.length > 0 && (
                   <div className="project-analysts">{p.analysts.map(pa => pa.analyst?.name || '').filter(Boolean).join(', ')}</div>

@@ -12,13 +12,12 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
   const [showModal, setShowModal] = useState(false)
   const [digestData, setDigestData] = useState(null)
   const [expanded, setExpanded] = useState({})
+  const [confirmDelete, setConfirmDelete] = useState(null)
 
   function handleSave({ meeting, digest, title }) {
     setMeetings(prev => [meeting, ...prev])
     setShowModal(false)
-    if (digest) {
-      setDigestData({ digest, title })
-    }
+    if (digest) setDigestData({ digest, title })
   }
 
   async function handleApplyDigest() {
@@ -31,6 +30,15 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
     setProjects(Array.isArray(p) ? p : [])
     setTodos(Array.isArray(td) ? td : [])
     setDigestData(null)
+  }
+
+  async function deleteMeeting(id) {
+    try {
+      const res = await fetch(`/api/meetings/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setMeetings(prev => prev.filter(m => m.id !== id))
+      setConfirmDelete(null)
+    } catch (e) { showToast(e.message) }
   }
 
   if (loading) return <div className="empty-state">Loading…</div>
@@ -56,7 +64,7 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
           return (
             <div key={m.id} className="card meeting-card">
               <div className="meeting-top">
-                <div>
+                <div style={{ flex: 1 }}>
                   <div className="meeting-title">{m.title}</div>
                   <div className="meeting-tags">
                     {meetingAnalysts.length > 0
@@ -67,7 +75,18 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
                     }
                   </div>
                 </div>
-                <div className="meeting-date">{fmt(m.date)}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                  <div className="meeting-date">{fmt(m.date)}</div>
+                  {confirmDelete === m.id ? (
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteMeeting(m.id)}>Delete</button>
+                      <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                    </div>
+                  ) : (
+                    <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', fontSize: 15 }}
+                      onClick={() => setConfirmDelete(m.id)} title="Delete meeting">✕</button>
+                  )}
+                </div>
               </div>
               {m.digest > 0 && (
                 <div className="meeting-digest-bar">AI digest · {m.digest} updates applied</div>
@@ -86,23 +105,11 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
       </div>
 
       {showModal && (
-        <MeetingModal
-          analysts={analysts}
-          onSave={handleSave}
-          onClose={() => setShowModal(false)}
-          showToast={showToast}
-        />
+        <MeetingModal analysts={analysts} onSave={handleSave} onClose={() => setShowModal(false)} showToast={showToast} />
       )}
-
       {digestData && (
-        <DigestModal
-          digest={digestData.digest}
-          meetingTitle={digestData.title}
-          analysts={analysts}
-          projects={[]}
-          onApply={handleApplyDigest}
-          onClose={() => setDigestData(null)}
-        />
+        <DigestModal digest={digestData.digest} meetingTitle={digestData.title} analysts={analysts} projects={[]}
+          onApply={handleApplyDigest} onClose={() => setDigestData(null)} />
       )}
     </div>
   )

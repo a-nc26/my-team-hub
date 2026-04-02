@@ -42,6 +42,14 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
     } catch (e) { showToast(e.message) }
   }
 
+  async function deleteTodo(id) {
+    try {
+      const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setTodos(prev => prev.filter(t => t.id !== id))
+    } catch (e) { showToast(e.message) }
+  }
+
   const visible = todos.filter(t => {
     if (filter === 'open') return !t.done
     if (filter === 'done') return t.done
@@ -63,12 +71,8 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="todos-add-row">
-          <input
-            value={text}
-            onChange={e => setText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addTodo()}
-            placeholder="Add a to-do..."
-          />
+          <input value={text} onChange={e => setText(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTodo()} placeholder="Add a to-do..." />
           <select value={analystId} onChange={e => setAnalystId(e.target.value)} style={{ width: 140 }}>
             <option value="">No person</option>
             {analysts.filter(a => !a.pending).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -83,10 +87,7 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
       </div>
 
       {visible.length === 0 && (
-        <div className="empty-state">
-          <div className="empty-state-icon">✅</div>
-          You're all caught up.
-        </div>
+        <div className="empty-state"><div className="empty-state-icon">✅</div>You're all caught up.</div>
       )}
 
       {visible.length > 0 && (
@@ -94,12 +95,7 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
           <div className="todo-list">
             {visible.map(t => (
               <div key={t.id} className="todo-item">
-                <input
-                  type="checkbox"
-                  className="todo-checkbox"
-                  checked={t.done}
-                  onChange={() => toggleDone(t)}
-                />
+                <input type="checkbox" className="todo-checkbox" checked={t.done} onChange={() => toggleDone(t)} />
                 <div style={{ flex: 1 }}>
                   <div className={`todo-text${t.done ? ' done' : ''}`}>{t.text}</div>
                   <div className="todo-tags">
@@ -108,6 +104,8 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
                     <span className="text-sm text-muted">{fmt(t.createdAt)}</span>
                   </div>
                 </div>
+                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
+                  onClick={() => deleteTodo(t.id)} title="Delete">✕</button>
               </div>
             ))}
           </div>
