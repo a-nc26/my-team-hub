@@ -90,3 +90,10 @@ model Todo {
   createdAt   DateTime  @default(now())
   completedAt DateTime?
 }
+
+model Settings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

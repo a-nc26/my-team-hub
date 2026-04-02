@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 
-function buildSystemPrompt(analysts, projects, meetings, todos) {
+function buildSystemPrompt(analysts, projects, meetings, todos, settings) {
   const analystList = analysts.map(a => {
     if (a.pending) return `- ${a.name}: not yet started`
     const last = a.notes?.[0]
@@ -22,8 +22,13 @@ function buildSystemPrompt(analysts, projects, meetings, todos) {
     `- ${t.text}${t.analyst ? ' [' + t.analyst.name + ']' : ''} (${t.priority})`
   ).join('\n')
 
-  return `You are an experienced management coach for a new manager who recently took over a team of analysts. 
-Be specific, direct, and practical. Reference people by first name. Keep responses concise — 3-5 sentences max unless the user asks for more detail.
+  const managerName = settings?.managerName || 'the manager'
+  const managerTitle = settings?.managerTitle || 'Team Lead'
+
+  return `You are an experienced management coach assisting ${managerName}, a ${managerTitle} who recently took over a team of analysts.
+Always address them by their first name (${managerName.split(' ')[0]}). Be specific, direct, and practical. Reference team members by first name. Keep responses concise — 3-5 sentences max unless asked for more detail.
+
+MANAGER: ${managerName} (${managerTitle})
 
 CURRENT TEAM STATE:
 ANALYSTS:
@@ -47,7 +52,7 @@ const QUICK_ASKS = [
   'How do I onboard my new analyst?',
 ]
 
-export default function AICoach({ analysts, projects, meetings, todos, showToast }) {
+export default function AICoach({ analysts, projects, meetings, todos, settings, showToast }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -70,7 +75,7 @@ export default function AICoach({ analysts, projects, meetings, todos, showToast
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: next,
-          systemPrompt: buildSystemPrompt(analysts, projects, meetings, todos),
+          systemPrompt: buildSystemPrompt(analysts, projects, meetings, todos, settings),
         }),
       })
       if (!res.ok) {
