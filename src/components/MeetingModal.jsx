@@ -34,11 +34,10 @@ export default function MeetingModal({ analysts, onSave, onClose, showToast }) {
     if (withDigest) {
       setDigesting(true)
       try {
-        const teamSnapshot = analysts.map(a => `- ${a.name} (id:${a.id}, ${a.role}): mood=${a.mood}`).join('\n')
         const res = await fetch('/api/ai/digest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: notes, teamSnapshot }),
+          body: JSON.stringify({ transcript: notes }),
         })
         if (!res.ok) {
           const err = await res.json()

@@ -74,7 +74,7 @@ export default function Home() {
             <button className="btn btn-sm" onClick={fetchAll}>Retry</button>
           </div>
         )}
-        {activeTab === 'team'     && <TeamTab analysts={analysts} setAnalysts={setAnalysts} loading={loading} showToast={showToast} />}
+        {activeTab === 'team'     && <TeamTab analysts={analysts} setAnalysts={setAnalysts} meetings={meetings} loading={loading} showToast={showToast} />}
         {activeTab === 'projects' && <ProjectsTab projects={projects} setProjects={setProjects} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}
         {activeTab === 'todos'    && <TodosTab todos={todos} setTodos={setTodos} analysts={analysts} loading={loading} showToast={showToast} />}

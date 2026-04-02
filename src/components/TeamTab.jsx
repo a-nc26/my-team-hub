@@ -3,12 +3,12 @@ import { useState } from 'react'
 import AnalystCard from './AnalystCard'
 import AnalystModal from './AnalystModal'
 
-export default function TeamTab({ analysts, setAnalysts, loading, showToast }) {
+export default function TeamTab({ analysts, setAnalysts, meetings, loading, showToast }) {
   const [selected, setSelected] = useState(null)
 
   const active = analysts.filter(a => !a.pending)
-  const thriving = active.filter(a => a.mood === 'h').length
-  const steady   = active.filter(a => a.mood === 'm').length
+  const thriving  = active.filter(a => a.mood === 'h').length
+  const steady    = active.filter(a => a.mood === 'm').length
   const attention = active.filter(a => a.mood === 'l').length
 
   if (loading) return (
@@ -38,6 +38,7 @@ export default function TeamTab({ analysts, setAnalysts, loading, showToast }) {
       {selected && (
         <AnalystModal
           analyst={selected}
+          meetings={meetings}
           onClose={() => setSelected(null)}
           onUpdate={updated => {
             setAnalysts(prev => prev.map(a => a.id === updated.id ? { ...a, ...updated } : a))
