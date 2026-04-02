@@ -10,7 +10,7 @@ export async function PUT(req, { params }) {
       data: {
         ...fields,
         updatedAt: new Date(),
-        ...(analystIds
+        ...(analystIds != null
           ? {
               analysts: {
                 deleteMany: {},

@@ -65,6 +65,7 @@ model Project {
   type      String   @default("google")
   status    String   @default("active")
   notes     String?
+  fieldDefs Json?    // [{ id, label, type: "text|number|select", options?: string[] }]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -72,10 +73,11 @@ model Project {
 }
 
 model ProjectAnalyst {
-  projectId String
-  analystId String
-  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  analyst   Analyst @relation(fields: [analystId], references: [id], onDelete: Cascade)
+  projectId   String
+  analystId   String
+  fieldValues Json?   // { fieldId: value }
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  analyst     Analyst @relation(fields: [analystId], references: [id], onDelete: Cascade)
 
   @@id([projectId, analystId])
 }
