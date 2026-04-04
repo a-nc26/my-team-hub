@@ -16,14 +16,27 @@ export async function GET() {
 export async function POST(req) {
   try {
     const body = await req.json()
+    // assignments: [{ analystId, fieldValues: {} }] OR legacy analystIds: []
+    const assignments = body.assignments ||
+      (body.analystIds || []).map(id => ({ analystId: id, fieldValues: {} }))
+
+    const defaultFields = [
+      { id: 'harmArea', label: 'Harm Area', type: 'text' },
+      { id: 'amount',   label: 'Amount',    type: 'number' },
+    ]
+
     const project = await prisma.project.create({
       data: {
-        name: body.name,
-        type: body.type || 'google',
-        status: body.status || 'active',
-        notes: body.notes || '',
+        name:      body.name,
+        type:      body.type || 'google',
+        status:    body.status || 'active',
+        notes:     body.notes || '',
+        fieldDefs: body.fieldDefs ?? defaultFields,
         analysts: {
-          create: (body.analystIds || []).map(id => ({ analystId: id })),
+          create: assignments.map(a => ({
+            analystId:   a.analystId,
+            fieldValues: a.fieldValues || {},
+          })),
         },
       },
       include: { analysts: { include: { analyst: true } } },

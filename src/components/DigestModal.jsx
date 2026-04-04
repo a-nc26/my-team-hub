@@ -14,7 +14,16 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
   const [todoChecks, setTodoChecks] = useState(() =>
     Object.fromEntries((digest.todos || []).map((_, i) => [i, true]))
   )
+  // Analyst links for flags and todos
+  const [flagAnalysts, setFlagAnalysts] = useState(() =>
+    Object.fromEntries((digest.flags || []).map((_, i) => [i, '']))
+  )
+  const [todoAnalysts, setTodoAnalysts] = useState(() =>
+    Object.fromEntries((digest.todos || []).map((_, i) => [i, '']))
+  )
   const [applying, setApplying] = useState(false)
+
+  const activeAnalysts = (analysts || []).filter(a => !a.pending)
 
   const moodBadge = m => {
     if (m === 'h') return <span className="badge badge-green">Thriving</span>
@@ -29,6 +38,13 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
     return <span className={`badge ${map[s] || 'badge-gray'}`}>{s}</span>
   }
 
+  // Count separately to avoid key collision
+  const total =
+    Object.values(analystChecks).filter(Boolean).length +
+    Object.values(projectChecks).filter(Boolean).length +
+    Object.values(flagChecks).filter(Boolean).length +
+    Object.values(todoChecks).filter(Boolean).length
+
   async function apply() {
     setApplying(true)
     try {
@@ -36,10 +52,11 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
       ;(digest.analystUpdates || []).forEach((u, i) => {
         if (!analystChecks[i]) return
-        const analyst = analysts.find(a =>
-          a.name.toLowerCase().includes(u.name?.toLowerCase()) ||
-          u.name?.toLowerCase().includes(a.name.toLowerCase().split(' ')[0])
-        ) || (u.id ? analysts.find(a => a.id === u.id) : null)
+        const analyst = analysts.find(a => a.id === u.id) ||
+          analysts.find(a =>
+            a.name.toLowerCase().includes(u.name?.toLowerCase()) ||
+            u.name?.toLowerCase().includes(a.name.toLowerCase().split(' ')[0])
+          )
         if (!analyst) return
         if (u.mood && u.mood !== 'null') {
           promises.push(fetch(`/api/team/${analyst.id}`, {
@@ -57,8 +74,8 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
       ;(digest.projectUpdates || []).forEach((u, i) => {
         if (!projectChecks[i]) return
-        const project = projects.find(p => p.name.toLowerCase().includes(u.name?.toLowerCase())) ||
-          (u.id ? projects.find(p => p.id === u.id) : null)
+        const project = (projects || []).find(p => p.id === u.id) ||
+          (projects || []).find(p => p.name.toLowerCase().includes(u.name?.toLowerCase()))
         if (!project) return
         const update = {}
         if (u.status && u.status !== 'null') update.status = u.status
@@ -75,7 +92,7 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
         if (!flagChecks[i]) return
         promises.push(fetch('/api/todos', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: f, priority: 'high' }),
+          body: JSON.stringify({ text: f, priority: 'high', analystId: flagAnalysts[i] || null }),
         }))
       })
 
@@ -83,7 +100,7 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
         if (!todoChecks[i]) return
         promises.push(fetch('/api/todos', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: t, priority: 'normal' }),
+          body: JSON.stringify({ text: t, priority: 'normal', analystId: todoAnalysts[i] || null }),
         }))
       })
 
@@ -96,7 +113,16 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
     }
   }
 
-  const total = Object.values({...analystChecks,...projectChecks,...flagChecks,...todoChecks}).filter(Boolean).length
+  const AnalystPicker = ({ value, onChange }) => (
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      style={{ fontSize: 11, padding: '2px 6px', width: 'auto', marginTop: 4, color: value ? 'var(--text-primary)' : 'var(--text-tertiary)' }}
+    >
+      <option value="">Link to analyst…</option>
+      {activeAnalysts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+    </select>
+  )
 
   return (
     <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
@@ -111,7 +137,8 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
             <div className="digest-section-title">Analyst updates</div>
             {digest.analystUpdates.map((u, i) => (
               <div key={i} className="digest-item">
-                <input type="checkbox" checked={!!analystChecks[i]} onChange={e => setAnalystChecks(prev => ({...prev,[i]:e.target.checked}))} />
+                <input type="checkbox" checked={!!analystChecks[i]}
+                  onChange={e => setAnalystChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
                 <div className="digest-item-content">
                   <div className="digest-item-name">{u.name} {u.mood && u.mood !== 'null' && moodBadge(u.mood)}</div>
                   <div className="digest-item-note">{u.note}</div>
@@ -126,7 +153,8 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
             <div className="digest-section-title">Project updates</div>
             {digest.projectUpdates.map((u, i) => (
               <div key={i} className="digest-item">
-                <input type="checkbox" checked={!!projectChecks[i]} onChange={e => setProjectChecks(prev => ({...prev,[i]:e.target.checked}))} />
+                <input type="checkbox" checked={!!projectChecks[i]}
+                  onChange={e => setProjectChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
                 <div className="digest-item-content">
                   <div className="digest-item-name">{u.name} {statusBadge(u.status)}</div>
                   <div className="digest-item-note">{u.note}</div>
@@ -138,11 +166,17 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
         {(digest.flags || []).length > 0 && (
           <div className="digest-section">
-            <div className="digest-section-title">⚠️ Flags</div>
+            <div className="digest-section-title">⚠️ Flags — will be added as high-priority to-dos</div>
             {digest.flags.map((f, i) => (
               <div key={i} className="digest-item flag-item">
-                <input type="checkbox" checked={!!flagChecks[i]} onChange={e => setFlagChecks(prev => ({...prev,[i]:e.target.checked}))} />
-                <div className="digest-item-content"><div style={{ fontSize: 13 }}>{f}</div></div>
+                <input type="checkbox" checked={!!flagChecks[i]}
+                  onChange={e => setFlagChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
+                <div className="digest-item-content">
+                  <div style={{ fontSize: 13 }}>{f}</div>
+                  {flagChecks[i] && (
+                    <AnalystPicker value={flagAnalysts[i]} onChange={v => setFlagAnalysts(prev => ({ ...prev, [i]: v }))} />
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -153,10 +187,22 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
             <div className="digest-section-title">Suggested to-dos</div>
             {digest.todos.map((t, i) => (
               <div key={i} className="digest-item todo-item">
-                <input type="checkbox" checked={!!todoChecks[i]} onChange={e => setTodoChecks(prev => ({...prev,[i]:e.target.checked}))} />
-                <div className="digest-item-content"><div style={{ fontSize: 13 }}>{t}</div></div>
+                <input type="checkbox" checked={!!todoChecks[i]}
+                  onChange={e => setTodoChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
+                <div className="digest-item-content">
+                  <div style={{ fontSize: 13 }}>{t}</div>
+                  {todoChecks[i] && (
+                    <AnalystPicker value={todoAnalysts[i]} onChange={v => setTodoAnalysts(prev => ({ ...prev, [i]: v }))} />
+                  )}
+                </div>
               </div>
             ))}
+          </div>
+        )}
+
+        {total === 0 && (
+          <div className="empty-state" style={{ padding: '1rem 0' }}>
+            <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Select at least one item to apply.</div>
           </div>
         )}
 

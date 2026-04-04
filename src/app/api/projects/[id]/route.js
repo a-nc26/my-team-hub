@@ -4,20 +4,26 @@ import { prisma } from '@/lib/prisma'
 export async function PUT(req, { params }) {
   try {
     const body = await req.json()
-    const { analystIds, ...fields } = body
+    const { assignments, analystIds, ...fields } = body
+
+    // Resolve assignments from either format
+    const resolvedAssignments = assignments ||
+      (analystIds ? analystIds.map(id => ({ analystId: id, fieldValues: {} })) : null)
+
     const project = await prisma.project.update({
       where: { id: params.id },
       data: {
         ...fields,
         updatedAt: new Date(),
-        ...(analystIds != null
-          ? {
-              analysts: {
-                deleteMany: {},
-                create: analystIds.map(id => ({ analystId: id })),
-              },
-            }
-          : {}),
+        ...(resolvedAssignments != null ? {
+          analysts: {
+            deleteMany: {},
+            create: resolvedAssignments.map(a => ({
+              analystId:   a.analystId,
+              fieldValues: a.fieldValues || {},
+            })),
+          },
+        } : {}),
       },
       include: { analysts: { include: { analyst: true } } },
     })
