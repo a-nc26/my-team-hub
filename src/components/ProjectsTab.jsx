@@ -243,7 +243,8 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Failed to create project')
-      setProjects(prev => [await res.json(), ...prev])
+      const created = await res.json()
+      setProjects(prev => [created, ...prev])
       setShowForm(false)
     } catch (e) { showToast(e.message) }
   }
