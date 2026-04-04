@@ -76,7 +76,7 @@ ${todoContext || 'None'}
 
     const client = new Anthropic({ apiKey: key })
 
-    const prompt = `You are a management assistant helping a team manager extract structured insights from a meeting.
+    const prompt = `You are a management assistant helping a team lead extract structured insights from a meeting. The person reading this output IS the manager — write everything as if speaking directly to them, never in third person.
 
 You have full context of the team's history below. Use it to:
 - Recognize patterns (e.g. someone has been blocked for multiple meetings)
@@ -98,16 +98,16 @@ Extract updates in this exact JSON format. Return ONLY valid JSON, no markdown f
   "projectUpdates": [
     { "id": "project_id_from_context_or_null", "name": "project name", "status": "active|review|done|blocked|null", "note": "what was said, noting any status changes" }
   ],
-  "flags": ["urgent things the manager needs to know — especially if this is a recurring issue"],
-  "todos": ["clear action items for the manager, noting if this was previously raised"]
+  "flags": ["urgent things YOU need to be aware of — especially recurring issues. Write as a direct statement, e.g. 'Jade has been blocked on X for 3 meetings'"],
+  "todos": ["direct action items written as commands, e.g. 'Follow up with Jade on X' not 'Make sure Avi does X'. Never mention the manager by name."]
 }
 
 Rules:
 - Only include entries where you found clear signal in the transcript
 - Use the analyst/project ids from the context above when you can match them
 - mood: h=positive/energised/progress, l=stressed/blocked/struggling, null=neutral
-- flags: someone leaving, recurring blocker, deadline risk, interpersonal issue
-- todos: action items for the manager — flag if similar items appeared in previous meetings
+- flags: someone leaving, recurring blocker, deadline risk, interpersonal issue — written as facts, not instructions
+- todos: write as direct imperatives ("Follow up with...", "Schedule...", "Review...") — never "Avi should..." or "Make sure Avi..."
 - If nothing found for a category return an empty array`
 
     const response = await client.messages.create({
