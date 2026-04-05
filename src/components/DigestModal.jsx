@@ -90,10 +90,20 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
       ;(digest.flags || []).forEach((f, i) => {
         if (!flagChecks[i]) return
-        promises.push(fetch('/api/todos', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: f, priority: 'high', analystId: flagAnalysts[i] || null }),
-        }))
+        const linkedAnalystId = flagAnalysts[i] || null
+        if (linkedAnalystId) {
+          // Save as a concern note under the analyst
+          promises.push(fetch(`/api/team/${linkedAnalystId}/notes`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: `⚠️ ${f}`, mood: 'l', source: 'digest', meetingTitle }),
+          }))
+        } else {
+          // No analyst linked — fall back to a high-priority todo
+          promises.push(fetch('/api/todos', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: f, priority: 'high' }),
+          }))
+        }
       })
 
       ;(digest.todos || []).forEach((t, i) => {
@@ -166,7 +176,7 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
         {(digest.flags || []).length > 0 && (
           <div className="digest-section">
-            <div className="digest-section-title">⚠️ Flags — will be added as high-priority to-dos</div>
+            <div className="digest-section-title">⚠️ Flags — saved as concern note under analyst (link one below)</div>
             {digest.flags.map((f, i) => (
               <div key={i} className="digest-item flag-item">
                 <input type="checkbox" checked={!!flagChecks[i]}

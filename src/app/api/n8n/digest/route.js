@@ -236,8 +236,20 @@ Rules: only include entries with clear signal. Return empty arrays if nothing fo
         ops.push(prisma.todo.create({ data: { text: t, priority: 'normal' } }))
       })
 
+      // Flags: save as concern notes under matched analysts, not todos
       ;(digest.flags || []).forEach(f => {
-        ops.push(prisma.todo.create({ data: { text: f, priority: 'high' } }))
+        // Try to find the analyst mentioned in the flag text
+        const mentionedAnalyst = analysts.find(a =>
+          f.toLowerCase().includes(a.name.toLowerCase().split(' ')[0])
+        )
+        if (mentionedAnalyst) {
+          ops.push(prisma.note.create({
+            data: { text: `⚠️ ${f}`, mood: 'l', source: 'digest', meetingTitle: title, analystId: mentionedAnalyst.id },
+          }))
+        } else {
+          // No analyst match — fall back to high-priority todo
+          ops.push(prisma.todo.create({ data: { text: f, priority: 'high' } }))
+        }
       })
 
       await Promise.all(ops)
