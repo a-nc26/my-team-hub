@@ -40,7 +40,7 @@ export default function MeetingModal({ analysts, onSave, onClose, showToast }) {
         const res = await fetch('/api/ai/digest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transcript: notes }),
+          body: JSON.stringify({ transcript: notes, title, analystIds: activeAnalystIds() }),
         })
         if (!res.ok) {
           const err = await res.json()

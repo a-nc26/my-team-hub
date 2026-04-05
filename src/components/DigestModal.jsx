@@ -16,7 +16,10 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
   )
   // Analyst links for flags and todos
   const [flagAnalysts, setFlagAnalysts] = useState(() =>
-    Object.fromEntries((digest.flags || []).map((_, i) => [i, '']))
+    Object.fromEntries((digest.flags || []).map((f, i) => {
+      const flagAnalystId = typeof f === 'string' ? '' : (f.analystId || '')
+      return [i, flagAnalystId]
+    }))
   )
   const [todoAnalysts, setTodoAnalysts] = useState(() =>
     Object.fromEntries((digest.todos || []).map((_, i) => [i, '']))
@@ -90,18 +93,19 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
 
       ;(digest.flags || []).forEach((f, i) => {
         if (!flagChecks[i]) return
+        const flagText = typeof f === 'string' ? f : f.text
         const linkedAnalystId = flagAnalysts[i] || null
         if (linkedAnalystId) {
           // Save as a concern note under the analyst
           promises.push(fetch(`/api/team/${linkedAnalystId}/notes`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: `⚠️ ${f}`, mood: 'l', source: 'digest', meetingTitle }),
+            body: JSON.stringify({ text: `⚠️ ${flagText}`, mood: 'l', source: 'digest', meetingTitle }),
           }))
         } else {
           // No analyst linked — fall back to a high-priority todo
           promises.push(fetch('/api/todos', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: f, priority: 'high' }),
+            body: JSON.stringify({ text: flagText, priority: 'high' }),
           }))
         }
       })
@@ -177,18 +181,21 @@ export default function DigestModal({ digest, analysts, projects, meetingTitle, 
         {(digest.flags || []).length > 0 && (
           <div className="digest-section">
             <div className="digest-section-title">⚠️ Flags — saved as concern note under analyst (link one below)</div>
-            {digest.flags.map((f, i) => (
-              <div key={i} className="digest-item flag-item">
-                <input type="checkbox" checked={!!flagChecks[i]}
-                  onChange={e => setFlagChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
-                <div className="digest-item-content">
-                  <div style={{ fontSize: 13 }}>{f}</div>
-                  {flagChecks[i] && (
-                    <AnalystPicker value={flagAnalysts[i]} onChange={v => setFlagAnalysts(prev => ({ ...prev, [i]: v }))} />
-                  )}
+            {digest.flags.map((f, i) => {
+              const flagText = typeof f === 'string' ? f : f.text
+              return (
+                <div key={i} className="digest-item flag-item">
+                  <input type="checkbox" checked={!!flagChecks[i]}
+                    onChange={e => setFlagChecks(prev => ({ ...prev, [i]: e.target.checked }))} />
+                  <div className="digest-item-content">
+                    <div style={{ fontSize: 13 }}>{flagText}</div>
+                    {flagChecks[i] && (
+                      <AnalystPicker value={flagAnalysts[i]} onChange={v => setFlagAnalysts(prev => ({ ...prev, [i]: v }))} />
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
 

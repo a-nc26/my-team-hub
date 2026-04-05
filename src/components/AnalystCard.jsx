@@ -22,6 +22,41 @@ function MoodDots({ mood }) {
   )
 }
 
+const MOOD_COLOR = { h: '#16a34a', m: '#9ca3af', l: '#dc2626' }
+
+function MoodSparkline({ notes }) {
+  if (!notes || notes.length < 2) return null
+  const recent = notes.slice(0, 5).reverse()
+  const lastNote = notes[0]
+  const dateLabel = lastNote?.createdAt
+    ? new Date(lastNote.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    : null
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginBottom: 3 }}>trend</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 3 }}>
+          {recent.map((n, i) => (
+            <div
+              key={i}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                background: MOOD_COLOR[n.mood] || MOOD_COLOR.m,
+                flexShrink: 0,
+              }}
+            />
+          ))}
+        </div>
+        {dateLabel && (
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>{dateLabel}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function AnalystCard({ analyst, index, onClick }) {
   const c = COLORS[analyst.color ?? index % 7]
   const lastNote = analyst.notes?.[0]
@@ -44,6 +79,7 @@ export default function AnalystCard({ analyst, index, onClick }) {
         <div style={{ marginLeft: 'auto' }}>{badge}</div>
       </div>
       {!analyst.pending && <MoodDots mood={analyst.mood} />}
+      {!analyst.pending && <MoodSparkline notes={analyst.notes} />}
       {lastNote && <div className="card-note-preview">{lastNote.text}</div>}
     </div>
   )

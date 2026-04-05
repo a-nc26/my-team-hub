@@ -12,7 +12,7 @@ export async function POST(req) {
   }
   try {
     const body = await req.json()
-    const { transcript } = body
+    const { transcript, title = '', analystIds = [] } = body
 
     // Fetch full context from DB server-side
     const [analysts, projects, meetings, todos] = await Promise.all([
@@ -74,6 +74,19 @@ OPEN ACTION ITEMS:
 ${todoContext || 'None'}
 `.trim()
 
+    // Build meeting type line from analystIds
+    let meetingTypeLine = 'MEETING TYPE: General / team meeting'
+    if (analystIds.length === 1) {
+      const matchedAnalyst = analysts.find(a => a.id === analystIds[0])
+      meetingTypeLine = `MEETING TYPE: 1:1 with ${matchedAnalyst ? matchedAnalyst.name : analystIds[0]}`
+    } else if (analystIds.length >= 2) {
+      const names = analystIds.map(id => {
+        const a = analysts.find(a => a.id === id)
+        return a ? a.name : id
+      }).join(', ')
+      meetingTypeLine = `MEETING TYPE: Group meeting with ${names}`
+    }
+
     const client = new Anthropic({ apiKey: key })
 
     const prompt = `You are a management assistant helping a team lead extract structured insights from a meeting. The person reading this output IS the manager — write everything as if speaking directly to them, never in third person.
@@ -83,6 +96,8 @@ You have full context of the team's history below. Use it to:
 - Connect action items to previous commitments
 - Reference relevant project context
 - Notice when something contradicts or follows up on previous notes
+
+${meetingTypeLine}
 
 FULL TEAM CONTEXT:
 ${fullContext}
@@ -98,7 +113,7 @@ Extract updates in this exact JSON format. Return ONLY valid JSON, no markdown f
   "projectUpdates": [
     { "id": "project_id_from_context_or_null", "name": "project name", "status": "active|review|done|blocked|null", "note": "what was said, noting any status changes" }
   ],
-  "flags": ["urgent things YOU need to be aware of — especially recurring issues. Write as a direct statement, e.g. 'Jade has been blocked on X for 3 meetings'"],
+  "flags": [{ "text": "urgent fact-based statement", "analystId": "analyst_id_from_context_if_mentioned_or_null" }],
   "todos": ["direct action items written as commands, e.g. 'Follow up with Jade on X' not 'Make sure Avi does X'. Never mention the manager by name."]
 }
 
@@ -107,6 +122,7 @@ Rules:
 - Use the analyst/project ids from the context above when you can match them
 - mood: h=positive/energised/progress, l=stressed/blocked/struggling, null=neutral
 - flags: someone leaving, recurring blocker, deadline risk, interpersonal issue — written as facts, not instructions
+- flags: always try to match the analyst mentioned by name and include their id from the context. If no specific analyst is mentioned, use null.
 - todos: write as direct imperatives ("Follow up with...", "Schedule...", "Review...") — never "Avi should..." or "Make sure Avi..."
 - If nothing found for a category return an empty array`
 

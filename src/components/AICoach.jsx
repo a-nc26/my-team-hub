@@ -52,7 +52,9 @@ const QUICK_ASKS = [
 ]
 
 export default function AICoach({ analysts, projects, meetings, todos, settings, showToast }) {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('coach-history') || '[]') } catch { return [] }
+  })
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const bottomRef = useRef(null)
@@ -60,6 +62,10 @@ export default function AICoach({ analysts, projects, meetings, todos, settings,
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, loading])
+
+  useEffect(() => {
+    localStorage.setItem('coach-history', JSON.stringify(messages.slice(-40)))
+  }, [messages])
 
   async function send(text) {
     const userMsg = text || input.trim()
@@ -133,7 +139,7 @@ export default function AICoach({ analysts, projects, meetings, todos, settings,
           disabled={loading}
         />
         <button className="btn btn-primary" onClick={() => send()} disabled={loading || !input.trim()}>Send</button>
-        <button className="btn" onClick={() => setMessages([])} disabled={loading}>Clear</button>
+        <button className="btn" onClick={() => { setMessages([]); localStorage.removeItem('coach-history') }} disabled={loading}>Clear history</button>
       </div>
 
       <div className="quick-asks">
