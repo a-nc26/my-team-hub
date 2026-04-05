@@ -57,8 +57,11 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
         </div>
       )}
 
-      <div className="meetings-list">
-        {meetings.map(m => {
+      {meetings.length > 0 && (() => {
+        const oneOnOnes = meetings.filter(m => (m.analysts || []).length === 1)
+        const teamMeetings = meetings.filter(m => (m.analysts || []).length !== 1)
+
+        const renderCard = m => {
           const isExpanded = expanded[m.id]
           const meetingAnalysts = m.analysts || []
           return (
@@ -101,8 +104,29 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
               )}
             </div>
           )
-        })}
-      </div>
+        }
+
+        return (
+          <>
+            {oneOnOnes.length > 0 && (
+              <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                  1:1s — {oneOnOnes.length}
+                </div>
+                <div className="meetings-list">{oneOnOnes.map(renderCard)}</div>
+              </div>
+            )}
+            {teamMeetings.length > 0 && (
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.75rem' }}>
+                  Team — {teamMeetings.length}
+                </div>
+                <div className="meetings-list">{teamMeetings.map(renderCard)}</div>
+              </div>
+            )}
+          </>
+        )
+      })()}
 
       {showModal && (
         <MeetingModal analysts={analysts} onSave={handleSave} onClose={() => setShowModal(false)} showToast={showToast} />
