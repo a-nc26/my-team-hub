@@ -193,7 +193,9 @@ Rules: only include entries with clear signal. Return empty arrays if nothing fo
           title,
           date: now,
           notes: transcript,
-          digest: (digest.analystUpdates?.length || 0) + (digest.projectUpdates?.length || 0),
+          digest: 0,
+          // Always store digest as pending so user can review in the app
+          pendingDigest: applyUpdates ? null : digest,
           analysts: { create: analystIds.map(id => ({ analystId: id })) },
         },
       })
