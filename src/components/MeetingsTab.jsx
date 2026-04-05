@@ -10,7 +10,7 @@ function fmt(date) {
 
 export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalysts, setProjects, setTodos, loading, showToast }) {
   const [showModal, setShowModal] = useState(false)
-  const [digestData, setDigestData] = useState(null)
+  const [digestData, setDigestData] = useState(null) // { digest, title, meetingId }
   const [expanded, setExpanded] = useState({})
   const [confirmDelete, setConfirmDelete] = useState(null)
 
@@ -20,7 +20,22 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
     if (digest) setDigestData({ digest, title })
   }
 
+  function handleReview(meeting) {
+    setDigestData({ digest: meeting.pendingDigest, title: meeting.title, meetingId: meeting.id })
+  }
+
   async function handleApplyDigest() {
+    // If this was a pending digest on a meeting, clear it
+    if (digestData?.meetingId) {
+      await fetch(`/api/meetings/${digestData.meetingId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pendingDigest: null }),
+      })
+      setMeetings(prev => prev.map(m =>
+        m.id === digestData.meetingId ? { ...m, pendingDigest: null } : m
+      ))
+    }
     const [a, p, td] = await Promise.all([
       fetch('/api/team').then(r => r.json()),
       fetch('/api/projects').then(r => r.json()),
@@ -30,6 +45,17 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
     setProjects(Array.isArray(p) ? p : [])
     setTodos(Array.isArray(td) ? td : [])
     setDigestData(null)
+    showToast('Digest applied ✓')
+  }
+
+  function handleDismissDigest(meetingId) {
+    fetch(`/api/meetings/${meetingId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pendingDigest: null }),
+    })
+    setMeetings(prev => prev.map(m => m.id === meetingId ? { ...m, pendingDigest: null } : m))
+    showToast('Suggestions dismissed')
   }
 
   async function deleteMeeting(id) {
@@ -91,7 +117,14 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
                   )}
                 </div>
               </div>
-              {m.digest > 0 && (
+              {m.pendingDigest && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0 4px', padding: '8px 12px', background: 'var(--amber-50, #fffbeb)', border: '1px solid var(--amber-200, #fde68a)', borderRadius: 8 }}>
+                  <span style={{ fontSize: 13, color: '#92400e', flex: 1 }}>📋 AI suggestions ready to review</span>
+                  <button className="btn btn-amber btn-sm" onClick={() => handleReview(m)}>Review</button>
+                  <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, color: 'var(--text-tertiary)' }} onClick={() => handleDismissDigest(m.id)}>Dismiss</button>
+                </div>
+              )}
+              {!m.pendingDigest && m.digest > 0 && (
                 <div className="meeting-digest-bar">AI digest · {m.digest} updates applied</div>
               )}
               {m.notes && (

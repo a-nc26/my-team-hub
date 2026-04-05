@@ -34,6 +34,9 @@ export default function MeetingModal({ analysts, onSave, onClose, showToast }) {
     if (withDigest) {
       setDigesting(true)
       try {
+        // Save meeting first
+        const meeting = await saveMeeting(analystIds, 0)
+        // Run digest
         const res = await fetch('/api/ai/digest', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -44,9 +47,14 @@ export default function MeetingModal({ analysts, onSave, onClose, showToast }) {
           throw new Error(err.error || 'Digest failed')
         }
         const digestResult = await res.json()
-        const savedCount = digestResult.analystUpdates?.length + digestResult.todos?.length || 0
-        const meeting = await saveMeeting(analystIds, savedCount)
-        onSave({ meeting, digest: digestResult, title })
+        // Save digest as pending on the meeting — not applied yet
+        await fetch(`/api/meetings/${meeting.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pendingDigest: digestResult }),
+        })
+        onSave({ meeting: { ...meeting, pendingDigest: digestResult }, digest: null })
+        showToast('Meeting saved — AI suggestions are ready to review')
       } catch (e) {
         showToast(e.message)
         setDigesting(false)

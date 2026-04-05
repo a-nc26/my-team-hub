@@ -39,13 +39,14 @@ model Note {
 }
 
 model Meeting {
-  id        String   @id @default(cuid())
-  title     String
-  date      DateTime
-  notes     String
-  digest    Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String   @id @default(cuid())
+  title         String
+  date          DateTime
+  notes         String
+  digest        Int      @default(0)
+  pendingDigest Json?    // stored AI recommendations awaiting review
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   analysts MeetingAnalyst[]
 }
