@@ -51,10 +51,7 @@ export default function Home() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  // Prompt to set name on first load
-  useEffect(() => {
-    if (!loading && !settings.managerName) setShowSettings(true)
-  }, [loading, settings.managerName])
+  // No auto-popup — user opens settings manually via nav
 
   const hasAttention = analysts.some(a => !a.pending && a.mood === 'l')
 
