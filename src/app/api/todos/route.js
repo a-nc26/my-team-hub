@@ -25,6 +25,7 @@ export async function POST(req) {
     const todo = await prisma.todo.create({
       data: {
         text: body.text,
+        group: body.group || null,
         analystId: body.analystId || null,
         priority: body.priority || 'normal',
       },

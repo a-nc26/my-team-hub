@@ -85,6 +85,7 @@ model ProjectAnalyst {
 model Todo {
   id          String    @id @default(cuid())
   text        String
+  group       String?   // e.g. "Chromebook", "Personal", null = ungrouped
   analystId   String?
   analyst     Analyst?  @relation(fields: [analystId], references: [id], onDelete: SetNull)
   priority    String    @default("normal")

@@ -8,12 +8,68 @@ function fmt(date) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
+function TodoItem({ t, onToggle, onDelete }) {
+  return (
+    <div className="todo-item">
+      <input type="checkbox" className="todo-checkbox" checked={t.done} onChange={() => onToggle(t)} />
+      <div style={{ flex: 1 }}>
+        <div className={`todo-text${t.done ? ' done' : ''}`}>{t.text}</div>
+        <div className="todo-tags">
+          {t.analyst && <span className="badge badge-blue">{t.analyst.name}</span>}
+          {t.priority !== 'normal' && <span className={`badge ${PRIORITY_COLORS[t.priority]}`}>{t.priority}</span>}
+          <span className="text-sm text-muted">{fmt(t.createdAt)}</span>
+        </div>
+      </div>
+      <button
+        className="btn btn-ghost btn-sm"
+        style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
+        onClick={() => onDelete(t.id)}
+        title="Delete"
+      >✕</button>
+    </div>
+  )
+}
+
+function GroupSection({ label, todos, collapsed, onToggle, onToggleDone, onDelete }) {
+  const open = todos.filter(t => !t.done).length
+  const done  = todos.filter(t => t.done).length
+  return (
+    <div className="card" style={{ marginBottom: '0.75rem' }}>
+      <div
+        onClick={onToggle}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '0.1rem 0', userSelect: 'none' }}
+      >
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', transition: 'transform .2s', display: 'inline-block', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0deg)' }}>▾</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>{label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)', marginLeft: 4 }}>
+          {open} open{done > 0 ? `, ${done} done` : ''}
+        </span>
+      </div>
+      {!collapsed && (
+        <div className="todo-list" style={{ marginTop: '0.5rem' }}>
+          {todos.map(t => (
+            <TodoItem key={t.id} t={t} onToggle={onToggleDone} onDelete={onDelete} />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TodosTab({ todos, setTodos, analysts, loading, showToast }) {
-  const [text, setText] = useState('')
+  const [text, setText]         = useState('')
+  const [group, setGroup]       = useState('')
+  const [customGroup, setCustomGroup] = useState('')
   const [analystId, setAnalystId] = useState('')
   const [priority, setPriority] = useState('normal')
-  const [filter, setFilter] = useState('all')
-  const [adding, setAdding] = useState(false)
+  const [filter, setFilter]     = useState('open')
+  const [adding, setAdding]     = useState(false)
+  const [collapsed, setCollapsed] = useState({})
+
+  // Collect all existing group names
+  const existingGroups = [...new Set(todos.map(t => t.group).filter(Boolean))].sort()
+
+  const resolvedGroup = group === '__new__' ? customGroup.trim() : group
 
   async function addTodo() {
     if (!text.trim()) return
@@ -21,12 +77,18 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
     try {
       const res = await fetch('/api/todos', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: text.trim(), analystId: analystId || null, priority }),
+        body: JSON.stringify({
+          text: text.trim(),
+          group: resolvedGroup || null,
+          analystId: analystId || null,
+          priority,
+        }),
       })
-      if (!res.ok) throw new Error('Failed to add todo')
+      if (!res.ok) throw new Error('Failed to add to-do')
       const todo = await res.json()
       setTodos(prev => [todo, ...prev])
       setText(''); setAnalystId(''); setPriority('normal')
+      setGroup(''); setCustomGroup('')
     } catch (e) { showToast(e.message) } finally { setAdding(false) }
   }
 
@@ -50,10 +112,25 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
     } catch (e) { showToast(e.message) }
   }
 
-  const visible = todos.filter(t => {
+  const filtered = todos.filter(t => {
     if (filter === 'open') return !t.done
     if (filter === 'done') return t.done
     return true
+  })
+
+  // Group todos: named groups + ungrouped ("Personal")
+  const groups = {}
+  filtered.forEach(t => {
+    const key = t.group || '__personal__'
+    if (!groups[key]) groups[key] = []
+    groups[key].push(t)
+  })
+
+  // Sort groups: named groups alphabetically, then personal last
+  const groupKeys = Object.keys(groups).sort((a, b) => {
+    if (a === '__personal__') return 1
+    if (b === '__personal__') return -1
+    return a.localeCompare(b)
   })
 
   if (loading) return <div className="empty-state">Loading…</div>
@@ -63,54 +140,67 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
       <div className="tab-header">
         <div className="tab-title">My To-Dos</div>
         <select value={filter} onChange={e => setFilter(e.target.value)} style={{ width: 'auto' }}>
-          <option value="all">All</option>
           <option value="open">Open</option>
           <option value="done">Done</option>
+          <option value="all">All</option>
         </select>
       </div>
 
+      {/* Add form */}
       <div className="card" style={{ marginBottom: '1rem' }}>
-        <div className="todos-add-row">
-          <input value={text} onChange={e => setText(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && addTodo()} placeholder="Add a to-do..." />
-          <select value={analystId} onChange={e => setAnalystId(e.target.value)} style={{ width: 140 }}>
+        <div className="todos-add-row" style={{ flexWrap: 'wrap', gap: '0.5rem' }}>
+          <input
+            value={text}
+            onChange={e => setText(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTodo()}
+            placeholder="Add a to-do..."
+            style={{ flex: '1 1 200px' }}
+          />
+          {/* Group picker */}
+          <select value={group} onChange={e => setGroup(e.target.value)} style={{ width: 140 }}>
+            <option value="">No group</option>
+            {existingGroups.map(g => <option key={g} value={g}>{g}</option>)}
+            <option value="__new__">+ New group…</option>
+          </select>
+          {group === '__new__' && (
+            <input
+              value={customGroup}
+              onChange={e => setCustomGroup(e.target.value)}
+              placeholder="Group name…"
+              style={{ width: 130 }}
+              autoFocus
+            />
+          )}
+          <select value={analystId} onChange={e => setAnalystId(e.target.value)} style={{ width: 130 }}>
             <option value="">No person</option>
             {analysts.filter(a => !a.pending).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
           </select>
-          <select value={priority} onChange={e => setPriority(e.target.value)} style={{ width: 110 }}>
+          <select value={priority} onChange={e => setPriority(e.target.value)} style={{ width: 100 }}>
             <option value="high">High</option>
             <option value="normal">Normal</option>
             <option value="low">Low</option>
           </select>
-          <button className="btn btn-primary" onClick={addTodo} disabled={adding || !text.trim()}>Add</button>
+          <button className="btn btn-primary" onClick={addTodo} disabled={adding || !text.trim() || (group === '__new__' && !customGroup.trim())}>
+            Add
+          </button>
         </div>
       </div>
 
-      {visible.length === 0 && (
+      {groupKeys.length === 0 && (
         <div className="empty-state"><div className="empty-state-icon">✅</div>You're all caught up.</div>
       )}
 
-      {visible.length > 0 && (
-        <div className="card">
-          <div className="todo-list">
-            {visible.map(t => (
-              <div key={t.id} className="todo-item">
-                <input type="checkbox" className="todo-checkbox" checked={t.done} onChange={() => toggleDone(t)} />
-                <div style={{ flex: 1 }}>
-                  <div className={`todo-text${t.done ? ' done' : ''}`}>{t.text}</div>
-                  <div className="todo-tags">
-                    {t.analyst && <span className="badge badge-blue">{t.analyst.name}</span>}
-                    {t.priority !== 'normal' && <span className={`badge ${PRIORITY_COLORS[t.priority]}`}>{t.priority}</span>}
-                    <span className="text-sm text-muted">{fmt(t.createdAt)}</span>
-                  </div>
-                </div>
-                <button className="btn btn-ghost btn-sm" style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
-                  onClick={() => deleteTodo(t.id)} title="Delete">✕</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {groupKeys.map(key => (
+        <GroupSection
+          key={key}
+          label={key === '__personal__' ? 'Personal / General' : key}
+          todos={groups[key]}
+          collapsed={!!collapsed[key]}
+          onToggle={() => setCollapsed(prev => ({ ...prev, [key]: !prev[key] }))}
+          onToggleDone={toggleDone}
+          onDelete={deleteTodo}
+        />
+      ))}
     </div>
   )
 }
