@@ -41,7 +41,8 @@ export default function TeamTab({ analysts, setAnalysts, meetings, loading, show
           meetings={meetings}
           onClose={() => setSelected(null)}
           onUpdate={updated => {
-            setAnalysts(prev => prev.map(a => a.id === updated.id ? { ...a, ...updated } : a))
+            const id = updated.id || selected?.id
+            setAnalysts(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a))
             setSelected(prev => prev ? { ...prev, ...updated } : null)
           }}
           showToast={showToast}
