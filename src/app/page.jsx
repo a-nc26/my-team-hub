@@ -6,6 +6,7 @@ import ProjectsTab from '@/components/ProjectsTab'
 import MeetingsTab from '@/components/MeetingsTab'
 import TodosTab from '@/components/TodosTab'
 import AICoach from '@/components/AICoach'
+import ToolsTab from '@/components/ToolsTab'
 import SettingsModal from '@/components/SettingsModal'
 
 export default function Home() {
@@ -14,6 +15,7 @@ export default function Home() {
   const [projects, setProjects] = useState([])
   const [meetings, setMeetings] = useState([])
   const [todos, setTodos] = useState([])
+  const [tools, setTools] = useState([])
   const [settings, setSettings] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,17 +32,19 @@ export default function Home() {
     setLoading(true)
     setError(null)
     try {
-      const [a, p, m, td, s] = await Promise.all([
+      const [a, p, m, td, tl, s] = await Promise.all([
         fetch('/api/team').then(r => r.json()),
         fetch('/api/projects').then(r => r.json()),
         fetch('/api/meetings').then(r => r.json()),
         fetch('/api/todos').then(r => r.json()),
+        fetch('/api/tools').then(r => r.json()),
         fetch('/api/settings').then(r => r.json()),
       ])
       setAnalysts(Array.isArray(a) ? a : [])
       setProjects(Array.isArray(p) ? p : [])
       setMeetings(Array.isArray(m) ? m : [])
       setTodos(Array.isArray(td) ? td : [])
+      setTools(Array.isArray(tl) ? tl : [])
       setSettings(s && !s.error ? s : {})
     } catch (e) {
       setError(e.message)
@@ -75,6 +79,7 @@ export default function Home() {
         {activeTab === 'projects' && <ProjectsTab projects={projects} setProjects={setProjects} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}
         {activeTab === 'todos'    && <TodosTab todos={todos} setTodos={setTodos} analysts={analysts} loading={loading} showToast={showToast} />}
+        {activeTab === 'tools'    && <ToolsTab tools={tools} setTools={setTools} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'ai'       && <AICoach analysts={analysts} projects={projects} meetings={meetings} todos={todos} settings={settings} showToast={showToast} />}
       </main>
       <div className="toast-container">

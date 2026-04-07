@@ -24,6 +24,7 @@ model Analyst {
   meetings MeetingAnalyst[]
   todos    Todo[]
   projects ProjectAnalyst[]
+  tools    Tool[]
 }
 
 model Note {
@@ -93,6 +94,19 @@ model Todo {
   done        Boolean   @default(false)
   createdAt   DateTime  @default(now())
   completedAt DateTime?
+}
+
+model Tool {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  url         String?
+  status      String   @default("active") // active, in-development, deprecated
+  category    String?
+  analystId   String?  // who built it
+  analyst     Analyst? @relation(fields: [analystId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Settings {

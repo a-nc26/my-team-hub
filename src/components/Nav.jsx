@@ -5,6 +5,7 @@ export default function Nav({ activeTab, setActiveTab, hasAttention, settings, o
     { id: 'projects', label: 'Projects' },
     { id: 'meetings', label: 'Meetings' },
     { id: 'todos', label: 'My To-Dos' },
+    { id: 'tools', label: 'Tools' },
     { id: 'ai', label: 'AI Coach' },
   ]
   const name = settings?.managerName || ''
