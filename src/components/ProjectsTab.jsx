@@ -255,8 +255,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Failed to update project')
-      setProjects(prev => prev.map(x => x.id === editing.id ? res.json() : x))
-      const updated = await fetch(`/api/projects/${editing.id}`).then(r => r.json())
+      const updated = await res.json()
       setProjects(prev => prev.map(x => x.id === updated.id ? updated : x))
       setEditing(null)
     } catch (e) { showToast(e.message) }
