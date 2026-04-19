@@ -31,6 +31,8 @@ export async function POST(req) {
         type:      body.type || 'google',
         status:    body.status || 'active',
         notes:     body.notes || '',
+        startDate: body.startDate ? new Date(body.startDate) : null,
+        endDate:   body.endDate   ? new Date(body.endDate)   : null,
         fieldDefs: body.fieldDefs ?? defaultFields,
         analysts: {
           create: assignments.map(a => ({

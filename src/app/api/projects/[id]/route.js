@@ -14,6 +14,8 @@ export async function PUT(req, { params }) {
       where: { id: params.id },
       data: {
         ...fields,
+        ...(fields.startDate !== undefined && { startDate: fields.startDate ? new Date(fields.startDate) : null }),
+        ...(fields.endDate   !== undefined && { endDate:   fields.endDate   ? new Date(fields.endDate)   : null }),
         updatedAt: new Date(),
         ...(resolvedAssignments != null ? {
           analysts: {

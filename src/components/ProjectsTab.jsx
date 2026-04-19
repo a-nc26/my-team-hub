@@ -93,11 +93,18 @@ const thStyle = { textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeigh
 const tdStyle = { padding: '6px 8px', borderBottom: '0.5px solid var(--border-light)', verticalAlign: 'middle' }
 
 // ── Project form (create / edit) ──────────────────────────────────────────────
+function toDateInput(val) {
+  if (!val) return ''
+  return new Date(val).toISOString().split('T')[0]
+}
+
 function ProjectForm({ initial, analysts, onSave, onCancel }) {
   const [name,        setName]        = useState(initial?.name   || '')
   const [type,        setType]        = useState(initial?.type   || 'google')
   const [status,      setStatus]      = useState(initial?.status || 'active')
   const [notes,       setNotes]       = useState(initial?.notes  || '')
+  const [startDate,   setStartDate]   = useState(toDateInput(initial?.startDate))
+  const [endDate,     setEndDate]     = useState(toDateInput(initial?.endDate))
   const [fieldDefs,   setFieldDefs]   = useState(initial?.fieldDefs  ?? DEFAULT_FIELDS)
   const [assignments, setAssignments] = useState(() => {
     if (initial?.analysts?.length) {
@@ -126,7 +133,7 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
     if (!name.trim()) return
     setSaving(true)
     try {
-      await onSave({ name, type, status, notes, fieldDefs, assignments })
+      await onSave({ name, type, status, notes, startDate: startDate || null, endDate: endDate || null, fieldDefs, assignments })
     } finally { setSaving(false) }
   }
 
@@ -152,6 +159,14 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
             <option value="done">Done</option>
             <option value="blocked">Blocked</option>
           </select>
+        </div>
+        <div className="form-group">
+          <label>Start date</label>
+          <input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+        </div>
+        <div className="form-group">
+          <label>End date</label>
+          <input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
         </div>
         <div className="form-group" style={{ gridColumn: '1/-1' }}>
           <label>Notes</label>
@@ -326,6 +341,18 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
                     )}
                   </div>
                 </div>
+                {(p.startDate || p.endDate) && (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                    <span>📅</span>
+                    {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                    {p.startDate && p.endDate && <span>→</span>}
+                    {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                    {p.startDate && p.endDate && (() => {
+                      const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
+                      return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
+                    })()}
+                  </div>
+                )}
                 {p.notes && <div className="project-notes-preview">{p.notes}</div>}
                 {expanded[p.id] && <AssignmentTable project={p} analysts={analysts} />}
               </>

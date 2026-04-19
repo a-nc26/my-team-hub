@@ -62,14 +62,16 @@ model MeetingAnalyst {
 }
 
 model Project {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
-  type      String   @default("google")
-  status    String   @default("active")
+  type      String    @default("google")
+  status    String    @default("active")
   notes     String?
-  fieldDefs Json?    // [{ id, label, type: "text|number|select", options?: string[] }]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  startDate DateTime?
+  endDate   DateTime?
+  fieldDefs Json?     // [{ id, label, type: "text|number|select", options?: string[] }]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   analysts ProjectAnalyst[]
 }

@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "my-team-hub",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/Users/avilurie/.nvm/versions/node/v24.14.0/bin/npm",
       "runtimeArgs": ["run", "dev"],
       "port": 3000
     }
