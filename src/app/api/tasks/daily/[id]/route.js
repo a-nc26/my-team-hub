@@ -5,9 +5,10 @@ export async function PATCH(req, { params }) {
   try {
     const body = await req.json()
     const data = {}
-    if (body.task !== undefined) data.task = body.task
-    if (body.status !== undefined) data.status = body.status
-    if (body.forDate !== undefined) data.forDate = body.forDate
+    if (body.task           !== undefined) data.task           = body.task
+    if (body.status         !== undefined) data.status         = body.status
+    if (body.forDate        !== undefined) data.forDate        = body.forDate
+    if (body.completionNote !== undefined) data.completionNote = body.completionNote
 
     const updated = await prisma.dailyTask.update({
       where: { id: params.id },

@@ -131,14 +131,15 @@ model Settings {
 }
 
 model DailyTask {
-  id        String   @id @default(cuid())
-  analystId String
-  analyst   Analyst  @relation(fields: [analystId], references: [id], onDelete: Cascade)
-  task      String
-  forDate   String   // YYYY-MM-DD string
-  status    String   @default("active") // active, done, blocked
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  analystId      String
+  analyst        Analyst  @relation(fields: [analystId], references: [id], onDelete: Cascade)
+  task           String
+  forDate        String   // YYYY-MM-DD string
+  status         String   @default("active") // active, done, blocked
+  completionNote String?  // what was done before marking complete
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model BriefingLog {

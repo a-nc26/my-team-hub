@@ -62,8 +62,11 @@ function getEventDateStr(event) {
   return null
 }
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const { searchParams } = new URL(req.url)
+    const dateParam = searchParams.get('date') // YYYY-MM-DD, defaults to today
+
     const setting = await prisma.settings.findFirst({ where: { key: 'calendarUrl' } })
 
     if (!setting?.value) {
@@ -81,10 +84,10 @@ export async function GET() {
     }
 
     const allEvents = parseICS(icsText)
-    const today = getTodayStr()
+    const targetDate = dateParam || getTodayStr()
 
     const todayEvents = allEvents
-      .filter(e => !e.cancelled && getEventDateStr(e) === today)
+      .filter(e => !e.cancelled && getEventDateStr(e) === targetDate)
       .sort((a, b) => {
         const aTime = a.start?.iso || a.start?.date || ''
         const bTime = b.start?.iso || b.start?.date || ''
