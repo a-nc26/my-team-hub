@@ -83,9 +83,10 @@ function TaskItem({ task, onComplete, onReactivate, onDelete }) {
           onChange={handleCheck}
           style={{ marginTop: 3, cursor: 'pointer', flexShrink: 0 }}
         />
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <span style={{
-            fontSize: 13, lineHeight: 1.4,
+            fontSize: 13, lineHeight: 1.4, display: 'block',
+            wordBreak: 'break-word', overflowWrap: 'break-word',
             color:          task.status === 'done' ? 'var(--text-tertiary)' : 'var(--text-primary)',
             textDecoration: task.status === 'done' ? 'line-through' : 'none',
           }}>
@@ -413,7 +414,7 @@ export default function TodayTab({ analysts, showToast, calendarUrl, onOpenSetti
           const activeCt = analystTasks.filter(t => t.status !== 'done').length
 
           return (
-            <div key={analyst.id} className="card" style={{ padding: '12px 14px' }}>
+            <div key={analyst.id} className="card" style={{ padding: '12px 14px', overflow: 'hidden', minWidth: 0 }}>
               {/* Analyst header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                 <div style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{analyst.name}</div>
