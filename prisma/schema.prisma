@@ -126,3 +126,11 @@ model Settings {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model BriefingLog {
+  id        String   @id @default(cuid())
+  summary   String   // Claude's generated text for that day
+  counts    Json?    // { analysts, projects, todos, highTodos }
+  flags     Json?    // what was flagged: { needsAttention: string[], dueSoon: string[], highTodoCount: number }
+  createdAt DateTime @default(now())
+}

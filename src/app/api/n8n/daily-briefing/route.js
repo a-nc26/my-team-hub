@@ -6,6 +6,8 @@ import { prisma } from '@/lib/prisma'
  * GET /api/n8n/daily-briefing
  *
  * Returns a morning briefing with team status, active projects, and open todos.
+ * Reads the last 7 briefing logs so Claude avoids repeating the same points.
+ * Saves every briefing to BriefingLog for future memory.
  * Hit this from n8n on a daily cron schedule (e.g. 8am) and pipe emailHtml to Send Email.
  */
 
@@ -29,7 +31,7 @@ export async function GET() {
   if (!key) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
 
   try {
-    const [analysts, projects, todos, settings] = await Promise.all([
+    const [analysts, projects, todos, settings, pastBriefings] = await Promise.all([
       prisma.analyst.findMany({
         where: { pending: false },
         include: { notes: { orderBy: { createdAt: 'desc' }, take: 3 } },
@@ -49,6 +51,11 @@ export async function GET() {
         orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
       }),
       prisma.settings.findMany(),
+      // Last 7 briefings for historical awareness
+      prisma.briefingLog.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: 7,
+      }),
     ])
 
     const managerName = settings.find(s => s.key === 'managerName')?.value || 'there'
@@ -75,6 +82,14 @@ export async function GET() {
       `- [${t.priority}] ${t.text}${t.analyst ? ' (re: ' + t.analyst.name + ')' : ''}`
     ).join('\n')
 
+    // Build past briefings context — so Claude can avoid repeating itself
+    const historyContext = pastBriefings.length > 0
+      ? pastBriefings.map(b => {
+          const date = new Date(b.createdAt).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+          return `[${date}]\n${b.summary}`
+        }).join('\n\n---\n\n')
+      : null
+
     // Ask Claude for a short, sharp morning briefing
     const client = new Anthropic({ apiKey: key })
     const response = await client.messages.create({
@@ -86,18 +101,23 @@ export async function GET() {
 Write directly to them using "you". Be concise and direct — this is a quick morning read, not a report.
 3-4 sentences max per section. Flag anything urgent. Use plain prose, no bullet lists in the output.
 
-TEAM STATE:
+${historyContext ? `RECENT PAST BRIEFINGS (last ${pastBriefings.length} days — read these carefully):
+${historyContext}
+
+IMPORTANT: Do NOT repeat points already covered in recent briefings unless the situation has materially changed or become more urgent. If something is resolved or no longer relevant, do not mention it. Prioritise NEW developments and what has actually changed since the last briefing.
+
+` : ''}TEAM STATE (today):
 ${teamContext || 'No active analysts.'}
 
-ACTIVE PROJECTS:
+ACTIVE PROJECTS (today):
 ${projectContext || 'No active projects.'}
 
 OPEN TO-DOS (${todos.length} total, ${todos.filter(t => t.priority === 'high').length} high priority):
 ${todoContext || 'None.'}
 
 Write a morning briefing with three short sections:
-1. Team pulse — who needs attention today
-2. Projects — what to keep an eye on, anything due soon
+1. Team pulse — who needs attention today, noting any changes since recent briefings
+2. Projects — what to keep an eye on, anything due soon or newly flagged
 3. Focus — the 2-3 most important things to do today based on the todos and context
 
 Keep the whole thing under 150 words. Warm but direct tone.`,
@@ -106,11 +126,25 @@ Keep the whole thing under 150 words. Warm but direct tone.`,
 
     const summary = response.content[0].text.trim()
 
-    // ── HTML email ────────────────────────────────────────────────────────────
+    // ── Save this briefing to the log for future memory ───────────────────────
     const needsAttention = analysts.filter(a => a.mood === 'l')
     const highTodos      = todos.filter(t => t.priority === 'high')
     const dueSoon        = projects.filter(p => p.endDate && daysUntil(p.endDate) <= 3 && daysUntil(p.endDate) >= 0)
 
+    // Fire-and-forget — don't block the response
+    prisma.briefingLog.create({
+      data: {
+        summary,
+        counts: { analysts: analysts.length, projects: projects.length, todos: todos.length, highTodos: highTodos.length },
+        flags: {
+          needsAttention: needsAttention.map(a => a.name),
+          dueSoon: dueSoon.map(p => p.name),
+          highTodoCount: highTodos.length,
+        },
+      },
+    }).catch(console.error)
+
+    // ── HTML email ────────────────────────────────────────────────────────────
     const teamRows = analysts.map(a => {
       const lastNote = a.notes[0]
       return `<tr>
