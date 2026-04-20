@@ -74,28 +74,32 @@ function TaskItem({ task, onComplete, onReactivate, onDelete }) {
   function handleCancel() { setCompleting(false); setNote('') }
 
   return (
-    <div style={{ marginBottom: 6 }}>
-      {/* Main row */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
+    <div style={{ marginBottom: 8 }}>
+      {/* Grid row: [checkbox] [text] [✕] — 1fr guarantees text never overflows */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '16px 1fr 20px',
+        gap: '4px 6px',
+        alignItems: 'start',
+      }}>
         <input
           type="checkbox"
           checked={task.status === 'done'}
           onChange={handleCheck}
-          style={{ marginTop: 3, cursor: 'pointer', flexShrink: 0 }}
+          style={{ marginTop: 2, cursor: 'pointer', width: 14, height: 14 }}
         />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <span style={{
-            fontSize: 13, lineHeight: 1.4, display: 'block',
+        <div>
+          <div style={{
+            fontSize: 13, lineHeight: 1.45,
             wordBreak: 'break-word', overflowWrap: 'break-word',
             color:          task.status === 'done' ? 'var(--text-tertiary)' : 'var(--text-primary)',
             textDecoration: task.status === 'done' ? 'line-through' : 'none',
           }}>
             {task.task}
-          </span>
-          {task.status === 'blocked' && (
-            <span className="badge badge-red" style={{ marginLeft: 6, fontSize: 10 }}>blocked</span>
-          )}
-          {/* Completion note shown on done tasks */}
+            {task.status === 'blocked' && (
+              <span className="badge badge-red" style={{ marginLeft: 6, fontSize: 10 }}>blocked</span>
+            )}
+          </div>
           {task.status === 'done' && task.completionNote && (
             <div style={{
               marginTop: 3, fontSize: 11, color: 'var(--text-secondary)',
@@ -109,7 +113,11 @@ function TaskItem({ task, onComplete, onReactivate, onDelete }) {
         </div>
         <button
           onClick={() => onDelete(task)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, opacity: 0.5, padding: '0 2px', flexShrink: 0 }}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            color: 'var(--text-tertiary)', fontSize: 14, opacity: 0.5,
+            padding: 0, lineHeight: 1, marginTop: 1,
+          }}
           title="Delete"
         >✕</button>
       </div>
@@ -414,7 +422,7 @@ export default function TodayTab({ analysts, showToast, calendarUrl, onOpenSetti
           const activeCt = analystTasks.filter(t => t.status !== 'done').length
 
           return (
-            <div key={analyst.id} className="card" style={{ padding: '12px 14px', overflow: 'hidden', minWidth: 0 }}>
+            <div key={analyst.id} className="card" style={{ padding: '12px 14px', minWidth: 0 }}>
               {/* Analyst header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
                 <div style={{ fontWeight: 600, fontSize: 13, flex: 1 }}>{analyst.name}</div>
