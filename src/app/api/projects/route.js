@@ -4,7 +4,10 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     const projects = await prisma.project.findMany({
-      include: { analysts: { include: { analyst: true } } },
+      include: {
+        analysts: { include: { analyst: true } },
+        projectNotes: { orderBy: { createdAt: 'desc' } },
+      },
       orderBy: { createdAt: 'desc' },
     })
     return NextResponse.json(projects)
@@ -41,7 +44,10 @@ export async function POST(req) {
           })),
         },
       },
-      include: { analysts: { include: { analyst: true } } },
+      include: {
+        analysts: { include: { analyst: true } },
+        projectNotes: { orderBy: { createdAt: 'desc' } },
+      },
     })
     return NextResponse.json(project, { status: 201 })
   } catch (e) {

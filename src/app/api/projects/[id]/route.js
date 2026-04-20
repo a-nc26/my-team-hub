@@ -27,7 +27,10 @@ export async function PUT(req, { params }) {
           },
         } : {}),
       },
-      include: { analysts: { include: { analyst: true } } },
+      include: {
+        analysts: { include: { analyst: true } },
+        projectNotes: { orderBy: { createdAt: 'desc' } },
+      },
     })
     return NextResponse.json(project)
   } catch (e) {

@@ -37,7 +37,10 @@ export async function GET() {
       }),
       prisma.project.findMany({
         where: { status: { not: 'done' } },
-        include: { analysts: { include: { analyst: true } } },
+        include: {
+          analysts: { include: { analyst: true } },
+          projectNotes: { orderBy: { createdAt: 'desc' }, take: 2 },
+        },
         orderBy: { updatedAt: 'desc' },
       }),
       prisma.todo.findMany({
@@ -63,7 +66,9 @@ export async function GET() {
       const due      = p.endDate ? `due ${fmtDate(p.endDate)}` : ''
       const daysLeft = p.endDate ? daysUntil(p.endDate) : null
       const urgency  = daysLeft !== null && daysLeft <= 2 ? ' ⚠️ DUE SOON' : ''
-      return `- ${p.name} [${p.status}]${due ? ' ' + due : ''}${urgency}${names ? ' — ' + names : ''}`
+      const lastNote = p.projectNotes?.[0]
+      const noteSnip = lastNote ? ` | last update: "${lastNote.text.slice(0, 100)}"` : ''
+      return `- ${p.name} [${p.status}]${due ? ' ' + due : ''}${urgency}${names ? ' — ' + names : ''}${noteSnip}`
     }).join('\n')
 
     const todoContext = todos.map(t =>
@@ -125,8 +130,12 @@ Keep the whole thing under 150 words. Warm but direct tone.`,
             ? `<span style="background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:11px">${daysLeft}d left</span>`
             : `<span style="color:#6b7280;font-size:12px">${fmtDate(p.endDate)}</span>`
         : ''
+      const lastNote = p.projectNotes?.[0]
+      const noteHtml = lastNote
+        ? `<div style="font-size:11px;color:#9ca3af;margin-top:2px">💬 ${lastNote.text.slice(0, 90)}${lastNote.text.length > 90 ? '…' : ''}</div>`
+        : ''
       return `<tr>
-        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:500">${STATUS_ICON[p.status] || '🔵'} ${p.name}</td>
+        <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;font-weight:500">${STATUS_ICON[p.status] || '🔵'} ${p.name}${noteHtml}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6;color:#6b7280;font-size:13px">${names || '—'}</td>
         <td style="padding:8px 12px;border-bottom:1px solid #f3f4f6">${dueBadge}</td>
       </tr>`
