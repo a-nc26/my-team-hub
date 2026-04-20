@@ -17,8 +17,18 @@ export async function POST(req, { params }) {
   try {
     const { text } = await req.json()
     if (!text?.trim()) return NextResponse.json({ error: 'text required' }, { status: 400 })
+
+    const allAnalysts = await prisma.analyst.findMany({ select: { id: true, name: true } })
+    const mentionedAnalystIds = allAnalysts
+      .filter(a => text.includes('@' + a.name))
+      .map(a => a.id)
+
     const note = await prisma.projectNote.create({
-      data: { text: text.trim(), projectId: params.id },
+      data: {
+        text: text.trim(),
+        projectId: params.id,
+        mentionedAnalystIds: mentionedAnalystIds.length > 0 ? mentionedAnalystIds : [],
+      },
     })
     return NextResponse.json(note, { status: 201 })
   } catch (e) {

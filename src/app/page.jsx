@@ -8,6 +8,7 @@ import TodosTab from '@/components/TodosTab'
 import AICoach from '@/components/AICoach'
 import ToolsTab from '@/components/ToolsTab'
 import SettingsModal from '@/components/SettingsModal'
+import TodayTab from '@/components/TodayTab'
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState('team')
@@ -75,6 +76,7 @@ export default function Home() {
             <button className="btn btn-sm" onClick={fetchAll}>Retry</button>
           </div>
         )}
+        {activeTab === 'today'    && <TodayTab analysts={analysts} showToast={showToast} />}
         {activeTab === 'team'     && <TeamTab analysts={analysts} setAnalysts={setAnalysts} meetings={meetings} loading={loading} showToast={showToast} />}
         {activeTab === 'projects' && <ProjectsTab projects={projects} setProjects={setProjects} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}

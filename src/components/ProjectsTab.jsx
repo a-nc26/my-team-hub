@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 
 const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red' }
 const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked' }
@@ -92,8 +92,120 @@ function AssignmentEditor({ assignments, setAssignments, analysts, fieldDefs }) 
 const thStyle = { textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '0.5px solid var(--border-light)', whiteSpace: 'nowrap' }
 const tdStyle = { padding: '6px 8px', borderBottom: '0.5px solid var(--border-light)', verticalAlign: 'middle' }
 
+// ── MentionInput — input with @-mention dropdown ──────────────────────────────
+function MentionInput({ value, onChange, onSubmit, analysts, placeholder }) {
+  const inputRef = useRef(null)
+  const [mentionQuery, setMentionQuery] = useState('')
+  const [mentionStart, setMentionStart] = useState(null)
+  const [showDropdown, setShowDropdown] = useState(false)
+
+  const filtered = analysts.filter(a =>
+    !a.pending && a.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
+  )
+
+  function handleChange(e) {
+    const val = e.target.value
+    onChange(val)
+
+    const cursor = e.target.selectionStart
+    // Find the last '@' before cursor
+    const before = val.slice(0, cursor)
+    const atIdx = before.lastIndexOf('@')
+    if (atIdx !== -1 && (atIdx === 0 || /\s/.test(before[atIdx - 1]))) {
+      const query = before.slice(atIdx + 1)
+      if (!/\s/.test(query)) {
+        setMentionStart(atIdx)
+        setMentionQuery(query)
+        setShowDropdown(true)
+        return
+      }
+    }
+    setShowDropdown(false)
+    setMentionQuery('')
+    setMentionStart(null)
+  }
+
+  function insertMention(name) {
+    const before = value.slice(0, mentionStart)
+    const after = value.slice(mentionStart + 1 + mentionQuery.length)
+    const newVal = before + '@' + name + ' ' + after
+    onChange(newVal)
+    setShowDropdown(false)
+    setMentionQuery('')
+    setMentionStart(null)
+    setTimeout(() => {
+      if (inputRef.current) {
+        const pos = before.length + name.length + 2
+        inputRef.current.focus()
+        inputRef.current.setSelectionRange(pos, pos)
+      }
+    }, 0)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === 'Escape') { setShowDropdown(false); return }
+    if (e.key === 'Enter' && !e.shiftKey && !showDropdown) { onSubmit(); return }
+  }
+
+  return (
+    <div style={{ position: 'relative', flex: 1 }}>
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        style={{ width: '100%', padding: '6px 10px', fontSize: 13, boxSizing: 'border-box' }}
+      />
+      {showDropdown && filtered.length > 0 && (
+        <div style={{
+          position: 'absolute', bottom: '100%', left: 0, marginBottom: 4,
+          background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-light)',
+          borderRadius: 'var(--radius-sm)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
+          zIndex: 100, minWidth: 160, maxHeight: 180, overflowY: 'auto',
+        }}>
+          {filtered.map(a => (
+            <button
+              key={a.id}
+              onMouseDown={e => { e.preventDefault(); insertMention(a.name) }}
+              style={{
+                display: 'block', width: '100%', textAlign: 'left',
+                padding: '7px 12px', fontSize: 13, background: 'none', border: 'none',
+                cursor: 'pointer', color: 'var(--text-primary)',
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}
+            >
+              @{a.name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Render comment text with @Name highlighted in blue
+function CommentText({ text, analysts }) {
+  const names = analysts.map(a => a.name)
+  if (names.length === 0) return <span>{text}</span>
+
+  const pattern = new RegExp(`(@(?:${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')}))`, 'g')
+  const parts = text.split(pattern)
+  return (
+    <span>
+      {parts.map((part, i) => {
+        if (part.startsWith('@') && names.includes(part.slice(1))) {
+          return <span key={i} style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{part}</span>
+        }
+        return <span key={i}>{part}</span>
+      })}
+    </span>
+  )
+}
+
 // ── Project comments ──────────────────────────────────────────────────────────
-function ProjectComments({ project, onNoteAdded, showToast }) {
+function ProjectComments({ project, onNoteAdded, showToast, analysts }) {
   const [text,    setText]    = useState('')
   const [saving,  setSaving]  = useState(false)
   const [deleting, setDeleting] = useState(null)
@@ -139,7 +251,9 @@ function ProjectComments({ project, onNoteAdded, showToast }) {
           {notes.map(n => (
             <div key={n.id} style={{ display: 'flex', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border-light)', alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>{n.text}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                  <CommentText text={n.text} analysts={analysts || []} />
+                </div>
                 <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{fmtTime(n.createdAt)}</div>
               </div>
               <button
@@ -157,12 +271,12 @@ function ProjectComments({ project, onNoteAdded, showToast }) {
       )}
 
       <div style={{ display: 'flex', gap: 6 }}>
-        <input
+        <MentionInput
           value={text}
-          onChange={e => setText(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleAdd()}
-          placeholder="Add a comment or update…"
-          style={{ flex: 1, padding: '6px 10px', fontSize: 13 }}
+          onChange={setText}
+          onSubmit={handleAdd}
+          analysts={analysts || []}
+          placeholder="Add a comment or update… (type @ to mention)"
         />
         <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={saving || !text.trim()}>
           {saving ? '…' : 'Add'}
@@ -457,6 +571,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
                       project={p}
                       onNoteAdded={handleNoteChange}
                       showToast={showToast}
+                      analysts={analysts}
                     />
                   </>
                 )}

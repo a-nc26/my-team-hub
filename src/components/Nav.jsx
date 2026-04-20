@@ -1,6 +1,7 @@
 'use client'
 export default function Nav({ activeTab, setActiveTab, hasAttention, settings, onOpenSettings }) {
   const tabs = [
+    { id: 'today', label: "Today's Board" },
     { id: 'team', label: 'Team' },
     { id: 'projects', label: 'Projects' },
     { id: 'meetings', label: 'Meetings' },

@@ -20,11 +20,12 @@ model Analyst {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  notes    Note[]
-  meetings MeetingAnalyst[]
-  todos    Todo[]
-  projects ProjectAnalyst[]
-  tools    Tool[]
+  notes      Note[]
+  meetings   MeetingAnalyst[]
+  todos      Todo[]
+  projects   ProjectAnalyst[]
+  tools      Tool[]
+  dailyTasks DailyTask[]
 }
 
 model Note {
@@ -78,11 +79,12 @@ model Project {
 }
 
 model ProjectNote {
-  id        String   @id @default(cuid())
-  text      String
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id                  String   @id @default(cuid())
+  text                String
+  projectId           String
+  project             Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  mentionedAnalystIds Json?
+  createdAt           DateTime @default(now())
 }
 
 model ProjectAnalyst {
@@ -124,6 +126,17 @@ model Settings {
   id        String   @id @default(cuid())
   key       String   @unique
   value     String
+  updatedAt DateTime @updatedAt
+}
+
+model DailyTask {
+  id        String   @id @default(cuid())
+  analystId String
+  analyst   Analyst  @relation(fields: [analystId], references: [id], onDelete: Cascade)
+  task      String
+  forDate   String   // YYYY-MM-DD string
+  status    String   @default("active") // active, done, blocked
+  createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
