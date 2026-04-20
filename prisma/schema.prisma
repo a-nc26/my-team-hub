@@ -98,15 +98,16 @@ model ProjectAnalyst {
 }
 
 model Todo {
-  id          String    @id @default(cuid())
-  text        String
-  group       String?   // e.g. "Chromebook", "Personal", null = ungrouped
-  analystId   String?
-  analyst     Analyst?  @relation(fields: [analystId], references: [id], onDelete: SetNull)
-  priority    String    @default("normal")
-  done        Boolean   @default(false)
-  createdAt   DateTime  @default(now())
-  completedAt DateTime?
+  id             String    @id @default(cuid())
+  text           String
+  group          String?   // e.g. "Chromebook", "Personal", null = ungrouped
+  analystId      String?
+  analyst        Analyst?  @relation(fields: [analystId], references: [id], onDelete: SetNull)
+  priority       String    @default("normal")
+  done           Boolean   @default(false)
+  completionNote String?   // what was actually done before closing
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
 }
 
 model Tool {

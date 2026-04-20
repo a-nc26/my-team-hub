@@ -31,7 +31,7 @@ export async function GET() {
   if (!key) return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 503 })
 
   try {
-    const [analysts, projects, todos, settings, pastBriefings] = await Promise.all([
+    const [analysts, projects, todos, settings, pastBriefings, recentlyDone] = await Promise.all([
       prisma.analyst.findMany({
         where: { pending: false },
         include: { notes: { orderBy: { createdAt: 'desc' }, take: 3 } },
@@ -51,6 +51,13 @@ export async function GET() {
         orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }],
       }),
       prisma.settings.findMany(),
+      // Recently completed todos (last 24h) — so Claude knows what was just resolved
+      prisma.todo.findMany({
+        where: { done: true, completedAt: { gte: new Date(Date.now() - 86400000) } },
+        include: { analyst: true },
+        orderBy: { completedAt: 'desc' },
+        take: 10,
+      }),
       // Last 7 briefings for historical awareness
       prisma.briefingLog.findMany({
         orderBy: { createdAt: 'desc' },
@@ -81,6 +88,12 @@ export async function GET() {
     const todoContext = todos.map(t =>
       `- [${t.priority}] ${t.text}${t.analyst ? ' (re: ' + t.analyst.name + ')' : ''}`
     ).join('\n')
+
+    const recentlyDoneContext = recentlyDone.length > 0
+      ? recentlyDone.map(t =>
+          `- ✓ ${t.text}${t.completionNote ? ': "' + t.completionNote + '"' : ''}${t.analyst ? ' (re: ' + t.analyst.name + ')' : ''}`
+        ).join('\n')
+      : null
 
     // Build past briefings context — so Claude can avoid repeating itself
     const historyContext = pastBriefings.length > 0
@@ -114,6 +127,7 @@ ${projectContext || 'No active projects.'}
 
 OPEN TO-DOS (${todos.length} total, ${todos.filter(t => t.priority === 'high').length} high priority):
 ${todoContext || 'None.'}
+${recentlyDoneContext ? `\nCOMPLETED IN THE LAST 24H (for context — do not re-flag these):\n${recentlyDoneContext}` : ''}
 
 Write a morning briefing with three short sections:
 1. Team pulse — who needs attention today, noting any changes since recent briefings
