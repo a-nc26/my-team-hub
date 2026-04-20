@@ -1,92 +1,87 @@
 # My Team Hub
 
-A team management dashboard built with Next.js, Prisma, and PostgreSQL — hosted on Vercel.
+A personal team management dashboard for team leads. Track your analysts, log meetings with AI digest, manage projects, todos, and tools — all in one place.
+
+Built with Next.js 14, Prisma, PostgreSQL (Neon), and Claude AI.
 
 ---
 
-## First-time setup
+## Quick Setup (~15 min)
 
-### 1. Set up your database (Neon — free)
+### 1. Fork & clone
 
-1. Go to https://neon.tech and create a free account
-2. Create a new project called "my-team-hub"
-3. On the dashboard, click **Connection Details**
-4. Copy the **Connection string** (looks like `postgresql://user:pass@host/db`)
-
-### 2. Configure environment variables
-
-Create a file at `app/.env.local`:
-
-```
-DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
-DIRECT_URL=postgresql://user:pass@host/db?sslmode=require
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-> Both DATABASE_URL and DIRECT_URL get the same Neon connection string for now.
-> (DIRECT_URL is used by Prisma Migrate to bypass connection pooling)
-
-### 3. Install dependencies & push schema
+Click **Fork** on GitHub, then:
 
 ```bash
-cd "/Users/avilurie/Desktop/My Team/app"
+git clone https://github.com/YOUR-USERNAME/my-team-hub.git
+cd my-team-hub/app
 npm install
-npm run db:push
 ```
 
-`db:push` creates all the tables in your Neon database automatically.
+### 2. Create a database (free)
 
-### 4. Run locally
+1. Go to [neon.tech](https://neon.tech) and create a free account
+2. Create a new project
+3. Copy the **connection string** — looks like:
+   `postgresql://user:password@host/dbname?sslmode=require`
+
+### 3. Get an Anthropic API key (for AI features)
+
+1. Go to [console.anthropic.com](https://console.anthropic.com)
+2. Create an API key
+
+### 4. Add environment variables
+
+Create a file called `.env.local` inside the `app/` folder:
+
+```
+DATABASE_URL=your_neon_connection_string
+DIRECT_URL=your_neon_connection_string
+ANTHROPIC_API_KEY=your_anthropic_key
+```
+
+### 5. Set up the database
+
+```bash
+npx prisma db push
+```
+
+This creates all the tables — no data, completely fresh.
+
+### 6. Run locally
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## Deploy to Vercel
+## Deploy to Vercel (free)
 
-### 1. Push to GitHub
-
-```bash
-cd "/Users/avilurie/Desktop/My Team/app"
-git init
-git add .
-git commit -m "Initial commit"
-# Create a repo on github.com, then:
-git remote add origin https://github.com/YOUR_USERNAME/my-team-hub.git
-git push -u origin main
-```
-
-### 2. Deploy on Vercel
-
-1. Go to https://vercel.com → New Project → Import your GitHub repo
-2. Vercel auto-detects Next.js — no config needed
-3. Before deploying, add environment variables in Vercel:
-   - **Settings → Environment Variables**
-   - Add `DATABASE_URL`, `DIRECT_URL`, and `ANTHROPIC_API_KEY`
-4. Click **Deploy**
-
-Your app will be live at `https://your-project.vercel.app`
+1. Push your fork to GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repo
+3. Set the **root directory** to `app`
+4. Add environment variables from step 4 above under **Settings → Environment Variables**
+5. Deploy — your app will be live at `https://your-project.vercel.app`
 
 ---
 
-## Seed initial team members
+## Features
 
-After running `npm run db:push`, open http://localhost:3000 and add your analysts
-through the app, **or** run the seed script:
-
-```bash
-node prisma/seed.js
-```
+- **Team** — analyst cards with mood tracking, notes history, sparkline trend
+- **Projects** — assign analysts with custom fields (harm area, amount etc.), start/end dates
+- **Meetings** — log 1:1s and team meetings, AI digest saves suggestions for your review
+- **My To-Dos** — grouped todos, link items to analysts
+- **Tools** — track tools your team builds (with status, category, builder)
+- **AI Coach** — chat with full context of your team state, conversation persists
+- **n8n integration** — `/api/n8n/digest` and `/api/n8n/weekly-summary` endpoints ready to use
 
 ---
 
-## Stack
+## First steps after setup
 
-- **Next.js 14** (App Router)
-- **Prisma** ORM
-- **Neon** PostgreSQL
-- **Anthropic Claude** API (server-side only)
+1. Open the app and click **Set your name** in the top right
+2. Go to **Team** → add your analysts
+3. Log your first meeting and try **Save + AI digest**
