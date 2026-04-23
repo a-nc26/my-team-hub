@@ -1,8 +1,10 @@
 'use client'
 import { useState, useCallback, useRef } from 'react'
 
-const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red' }
-const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked' }
+const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red', hold: 'badge-gray' }
+const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked', hold: 'On Hold' }
+const STATUS_ICONS   = { active: '🟢', review: '🔵', blocked: '🔴', hold: '⏸️', done: '✅' }
+const STATUS_ORDER   = ['active', 'review', 'blocked', 'hold', 'done']
 const DEFAULT_FIELDS = [
   { id: 'harmArea', label: 'Harm Area', type: 'text' },
   { id: 'amount',   label: 'Amount',    type: 'number' },
@@ -350,8 +352,9 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
           <select value={status} onChange={e => setStatus(e.target.value)}>
             <option value="active">Active</option>
             <option value="review">In Review</option>
-            <option value="done">Done</option>
             <option value="blocked">Blocked</option>
+            <option value="hold">On Hold</option>
+            <option value="done">Done</option>
           </select>
         </div>
         <div className="form-group">
@@ -439,12 +442,112 @@ function AssignmentTable({ project, analysts }) {
   )
 }
 
+// ── Status section (collapsible group of projects by status) ──────────────────
+function StatusSection({ status, projects, expanded, setExpanded, editing, setEditing, confirmDelete, setConfirmDelete, analysts, handleUpdate, handleDelete, handleNoteChange, showToast, sectionCollapsed, onToggleSection }) {
+  if (projects.length === 0) return null
+  const label = STATUS_LABELS[status] || status
+  const icon  = STATUS_ICONS[status]  || '📁'
+
+  return (
+    <div style={{ marginBottom: '1.25rem' }}>
+      {/* Section header */}
+      <div
+        onClick={onToggleSection}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+          padding: '6px 2px', userSelect: 'none', marginBottom: 6,
+        }}
+      >
+        <span style={{
+          fontSize: 11, color: 'var(--text-tertiary)', display: 'inline-block',
+          transition: 'transform .2s', transform: sectionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+        }}>▾</span>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2px' }}>{icon} {label}</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          {projects.length} project{projects.length !== 1 ? 's' : ''}
+        </span>
+      </div>
+
+      {!sectionCollapsed && (
+        <div className="projects-list">
+          {projects.map(p => (
+            <div key={p.id} className="card">
+              {editing?.id === p.id ? (
+                <ProjectForm initial={editing} analysts={analysts} onSave={handleUpdate} onCancel={() => setEditing(null)} />
+              ) : (
+                <>
+                  <div className="project-title-row">
+                    <span className="project-name">{p.name}</span>
+                    <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>
+                      {p.type === 'google' ? 'Google' : 'Side'}
+                    </span>
+                    <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>
+                      {STATUS_LABELS[p.status] || p.status}
+                    </span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+                      {(p.projectNotes?.length > 0) && !expanded[p.id] && (
+                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>
+                          💬 {p.projectNotes.length}
+                        </span>
+                      )}
+                      <button className="btn btn-ghost btn-sm"
+                        onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                        {expanded[p.id] ? 'Hide ▲' : 'Details ▼'}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => setEditing(p)}>Edit</button>
+                      {confirmDelete === p.id ? (
+                        <>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
+                          <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                        </>
+                      ) : (
+                        <button className="btn btn-ghost btn-sm"
+                          style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
+                          onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
+                      )}
+                    </div>
+                  </div>
+                  {(p.startDate || p.endDate) && (
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                      <span>📅</span>
+                      {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                      {p.startDate && p.endDate && <span>→</span>}
+                      {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                      {p.startDate && p.endDate && (() => {
+                        const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
+                        return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
+                      })()}
+                    </div>
+                  )}
+                  {p.notes && <div className="project-notes-preview">{p.notes}</div>}
+                  {expanded[p.id] && (
+                    <>
+                      <AssignmentTable project={p} analysts={analysts} />
+                      <ProjectComments
+                        project={p}
+                        onNoteAdded={handleNoteChange}
+                        showToast={showToast}
+                        analysts={analysts}
+                      />
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Main tab ───────────────────────────────────────────────────────────────────
 export default function ProjectsTab({ projects, setProjects, analysts, loading, showToast }) {
-  const [showForm,     setShowForm]     = useState(false)
-  const [editing,      setEditing]      = useState(null)
-  const [confirmDelete, setConfirmDelete] = useState(null)
-  const [expanded,     setExpanded]     = useState({})
+  const [showForm,        setShowForm]        = useState(false)
+  const [editing,         setEditing]         = useState(null)
+  const [confirmDelete,   setConfirmDelete]   = useState(null)
+  const [expanded,        setExpanded]        = useState({})
+  const [sectionCollapsed, setSectionCollapsed] = useState({ done: true, hold: false })
 
   // Called when a note is added (note = new note object) or deleted (note = null, noteId provided)
   const handleNoteChange = useCallback((projectId, note, deletedNoteId) => {
@@ -513,73 +616,55 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         </div>
       )}
 
-      <div className="projects-list">
-        {projects.map(p => (
-          <div key={p.id} className="card">
-            {editing?.id === p.id ? (
-              <ProjectForm initial={editing} analysts={analysts} onSave={handleUpdate} onCancel={() => setEditing(null)} />
-            ) : (
-              <>
-                <div className="project-title-row">
-                  <span className="project-name">{p.name}</span>
-                  <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>
-                    {p.type === 'google' ? 'Google' : 'Side'}
-                  </span>
-                  <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>
-                    {STATUS_LABELS[p.status] || p.status}
-                  </span>
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-                    {(p.projectNotes?.length > 0) && !expanded[p.id] && (
-                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>
-                        💬 {p.projectNotes.length}
-                      </span>
-                    )}
-                    <button className="btn btn-ghost btn-sm"
-                      onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
-                      {expanded[p.id] ? 'Hide ▲' : 'Details ▼'}
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => setEditing(p)}>Edit</button>
-                    {confirmDelete === p.id ? (
-                      <>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
-                        <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
-                      </>
-                    ) : (
-                      <button className="btn btn-ghost btn-sm"
-                        style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
-                        onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
-                    )}
-                  </div>
-                </div>
-                {(p.startDate || p.endDate) && (
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                    <span>📅</span>
-                    {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                    {p.startDate && p.endDate && <span>→</span>}
-                    {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                    {p.startDate && p.endDate && (() => {
-                      const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
-                      return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
-                    })()}
-                  </div>
-                )}
-                {p.notes && <div className="project-notes-preview">{p.notes}</div>}
-                {expanded[p.id] && (
-                  <>
-                    <AssignmentTable project={p} analysts={analysts} />
-                    <ProjectComments
-                      project={p}
-                      onNoteAdded={handleNoteChange}
-                      showToast={showToast}
-                      analysts={analysts}
-                    />
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
+      {STATUS_ORDER.map(status => {
+        const group = projects.filter(p => (p.status || 'active') === status)
+        return (
+          <StatusSection
+            key={status}
+            status={status}
+            projects={group}
+            expanded={expanded}
+            setExpanded={setExpanded}
+            editing={editing}
+            setEditing={setEditing}
+            confirmDelete={confirmDelete}
+            setConfirmDelete={setConfirmDelete}
+            analysts={analysts}
+            handleUpdate={handleUpdate}
+            handleDelete={handleDelete}
+            handleNoteChange={handleNoteChange}
+            showToast={showToast}
+            sectionCollapsed={!!sectionCollapsed[status]}
+            onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, [status]: !prev[status] }))}
+          />
+        )
+      })}
+
+      {/* Any unknown statuses not in STATUS_ORDER */}
+      {(() => {
+        const known = new Set(STATUS_ORDER)
+        const unknown = projects.filter(p => p.status && !known.has(p.status))
+        if (!unknown.length) return null
+        return (
+          <StatusSection
+            status="other"
+            projects={unknown}
+            expanded={expanded}
+            setExpanded={setExpanded}
+            editing={editing}
+            setEditing={setEditing}
+            confirmDelete={confirmDelete}
+            setConfirmDelete={setConfirmDelete}
+            analysts={analysts}
+            handleUpdate={handleUpdate}
+            handleDelete={handleDelete}
+            handleNoteChange={handleNoteChange}
+            showToast={showToast}
+            sectionCollapsed={!!sectionCollapsed['other']}
+            onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, other: !prev.other }))}
+          />
+        )
+      })()}
     </div>
   )
 }

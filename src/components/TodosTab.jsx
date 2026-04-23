@@ -150,14 +150,15 @@ function GroupSection({ label, todos, collapsed, onToggle, onComplete, onUncompl
 
 // ── Main tab ───────────────────────────────────────────────────────────────────
 export default function TodosTab({ todos, setTodos, analysts, loading, showToast }) {
-  const [text,        setText]        = useState('')
-  const [group,       setGroup]       = useState('')
-  const [customGroup, setCustomGroup] = useState('')
-  const [analystId,   setAnalystId]   = useState('')
-  const [priority,    setPriority]    = useState('normal')
-  const [filter,      setFilter]      = useState('open')
-  const [adding,      setAdding]      = useState(false)
-  const [collapsed,   setCollapsed]   = useState({})
+  const [text,               setText]               = useState('')
+  const [group,              setGroup]              = useState('')
+  const [customGroup,        setCustomGroup]        = useState('')
+  const [analystId,          setAnalystId]          = useState('')
+  const [priority,           setPriority]           = useState('normal')
+  const [filter,             setFilter]             = useState('open')
+  const [adding,             setAdding]             = useState(false)
+  const [collapsed,          setCollapsed]          = useState({})
+  const [pendingSuggestions, setPendingSuggestions] = useState([])
 
   const existingGroups = [...new Set(todos.map(t => t.group).filter(Boolean))].sort()
   const resolvedGroup  = group === '__new__' ? customGroup.trim() : group
@@ -183,6 +184,28 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
     } catch (e) { showToast(e.message) } finally { setAdding(false) }
   }
 
+  // Check for follow-up (fire-and-forget)
+  async function checkFollowup(todo, completionNote) {
+    if (!completionNote) return
+    try {
+      const res = await fetch('/api/todos/suggest-followup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todoText: todo.text, completionNote, analystId: todo.analystId || null }),
+      })
+      if (!res.ok) return
+      const { needsFollowup, suggestion } = await res.json()
+      if (needsFollowup && suggestion) {
+        setPendingSuggestions(prev => [...prev, {
+          id: Date.now(),
+          todoText: todo.text,
+          suggestion,
+          analystId: todo.analystId || null,
+          group: todo.group || null,
+        }])
+      }
+    } catch (_) { /* best-effort */ }
+  }
+
   // Mark done — with optional completion note
   async function completeTodo(todo, completionNote) {
     try {
@@ -193,7 +216,26 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
       if (!res.ok) throw new Error('Failed to update')
       const updated = await res.json()
       setTodos(prev => prev.map(t => t.id === updated.id ? updated : t))
+      // Fire async follow-up check — does not block the completion
+      if (completionNote) checkFollowup(todo, completionNote)
     } catch (e) { showToast(e.message) }
+  }
+
+  async function addFollowup(s) {
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: s.suggestion, group: s.group || null, analystId: s.analystId || null, priority: 'normal' }),
+      })
+      if (!res.ok) throw new Error('Failed to add follow-up')
+      const todo = await res.json()
+      setTodos(prev => [todo, ...prev])
+      setPendingSuggestions(prev => prev.filter(x => x.id !== s.id))
+    } catch (e) { showToast(e.message) }
+  }
+
+  function dismissSuggestion(id) {
+    setPendingSuggestions(prev => prev.filter(s => s.id !== id))
   }
 
   // Un-do — immediate, no note needed
@@ -291,6 +333,36 @@ export default function TodosTab({ todos, setTodos, analysts, loading, showToast
           </button>
         </div>
       </div>
+
+      {/* Follow-up suggestions */}
+      {pendingSuggestions.length > 0 && (
+        <div className="card" style={{
+          marginBottom: '1rem',
+          borderLeft: '3px solid var(--accent-blue, #3b82f6)',
+          background: 'var(--bg-secondary)',
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>💡</span>
+            <span>Suggested follow-ups</span>
+          </div>
+          {pendingSuggestions.map((s, i) => (
+            <div key={s.id} style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              padding: '8px 0',
+              borderTop: i > 0 ? '1px solid var(--border-light)' : 'none',
+            }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 2 }}>
+                  from "{s.todoText.length > 50 ? s.todoText.slice(0, 50) + '…' : s.todoText}"
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{s.suggestion}</div>
+              </div>
+              <button className="btn btn-primary btn-sm" onClick={() => addFollowup(s)}>Add it</button>
+              <button className="btn btn-sm" onClick={() => dismissSuggestion(s.id)}>Dismiss</button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {groupKeys.length === 0 && (
         <div className="empty-state"><div className="empty-state-icon">✅</div>You're all caught up.</div>
