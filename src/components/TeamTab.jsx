@@ -6,6 +6,18 @@ import AnalystModal from './AnalystModal'
 export default function TeamTab({ analysts, setAnalysts, meetings, loading, showToast }) {
   const [selected, setSelected] = useState(null)
 
+  async function handleMoodChange(id, mood) {
+    try {
+      const res = await fetch(`/api/team/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mood }),
+      })
+      if (!res.ok) throw new Error('Failed to update status')
+      const updated = await res.json()
+      setAnalysts(prev => prev.map(a => a.id === id ? { ...a, ...updated } : a))
+    } catch (e) { showToast(e.message) }
+  }
+
   const active = analysts.filter(a => !a.pending)
   const thriving  = active.filter(a => a.mood === 'h').length
   const steady    = active.filter(a => a.mood === 'm').length
@@ -32,7 +44,7 @@ export default function TeamTab({ analysts, setAnalysts, meetings, loading, show
       </div>
       <div className="team-grid">
         {analysts.map((a, i) => (
-          <AnalystCard key={a.id} analyst={a} index={i} onClick={() => setSelected(a)} />
+          <AnalystCard key={a.id} analyst={a} index={i} onClick={() => setSelected(a)} onMoodChange={mood => handleMoodChange(a.id, mood)} />
         ))}
       </div>
       {selected && (
