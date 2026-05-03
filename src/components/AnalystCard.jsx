@@ -34,32 +34,36 @@ function MoodDots({ mood, onMoodChange }) {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
 
+  const labelColor = mood === 'h' ? '#16a34a' : mood === 'l' ? '#dc2626' : '#6b7280'
+  const labelText  = mood === 'h' ? 'Thriving' : mood === 'l' ? 'Needs attention' : 'Steady'
+
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <div
-        className="mood-dots"
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
         title="Click to change status"
         style={{
+          display: 'inline-flex', alignItems: 'center', gap: 7,
           cursor: 'pointer',
-          padding: '4px 6px',
+          padding: '4px 8px',
           borderRadius: 'var(--radius-sm)',
           border: `1px solid ${open ? 'var(--border-medium)' : 'transparent'}`,
           transition: 'background 0.15s, border-color 0.15s',
-          display: 'flex', gap: 4,
+          marginLeft: -8,
         }}
         onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
         onMouseLeave={e => e.currentTarget.style.background = open ? 'var(--bg-tertiary)' : ''}
       >
-        {[1,2,3,4,5].map(i => (
-          <div key={i} className={`mood-dot${i <= count ? ' ' + cls : ''}`} />
-        ))}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className={`mood-dot${i <= count ? ' ' + cls : ''}`} />
+          ))}
+        </div>
+        <span style={{ fontSize: 12, fontWeight: 600, color: labelColor, userSelect: 'none' }}>
+          {labelText}
+        </span>
+        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', userSelect: 'none' }}>✎</span>
       </div>
-      <span
-        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-        style={{ fontSize: 11, color: 'var(--text-tertiary)', cursor: 'pointer', userSelect: 'none' }}
-        title="Click to change status"
-      >✎</span>
 
       {open && (
         <div
@@ -138,11 +142,7 @@ export default function AnalystCard({ analyst, index, onClick, onMoodChange }) {
   const lastNote = analyst.notes?.[0]
   const badge = analyst.pending
     ? <span className="badge badge-amber">Joining soon</span>
-    : analyst.mood === 'h'
-      ? <span className="badge badge-green">Thriving</span>
-      : analyst.mood === 'l'
-        ? <span className="badge badge-red">Needs attention</span>
-        : <span className="badge badge-gray">Steady</span>
+    : null
 
   return (
     <div className={`card analyst-card${analyst.pending ? ' pending' : ''}`} onClick={onClick}>
