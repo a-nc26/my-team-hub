@@ -253,10 +253,11 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
 .card-name { font-weight: 600; font-size: 14px; line-height: 1.3; }
 .card-role { font-size: 12px; color: var(--text-secondary); }
 
-.mood-dots { display: flex; gap: 4px; margin: 8px 0; }
+.mood-dots { display: flex; gap: 4px; margin: 6px 0; }
 .mood-dot {
-  width: 8px; height: 8px; border-radius: 50%;
+  width: 10px; height: 10px; border-radius: 50%;
   background: var(--border-medium);
+  pointer-events: none;
 }
 .mood-dot.filled-green  { background: var(--accent-green); }
 .mood-dot.filled-blue   { background: var(--accent-blue); }

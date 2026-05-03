@@ -35,17 +35,31 @@ function MoodDots({ mood, onMoodChange }) {
   }, [open])
 
   return (
-    <div ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+    <div ref={ref} style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <div
         className="mood-dots"
         onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
-        style={{ cursor: 'pointer' }}
         title="Click to change status"
+        style={{
+          cursor: 'pointer',
+          padding: '4px 6px',
+          borderRadius: 'var(--radius-sm)',
+          border: `1px solid ${open ? 'var(--border-medium)' : 'transparent'}`,
+          transition: 'background 0.15s, border-color 0.15s',
+          display: 'flex', gap: 4,
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
+        onMouseLeave={e => e.currentTarget.style.background = open ? 'var(--bg-tertiary)' : ''}
       >
         {[1,2,3,4,5].map(i => (
           <div key={i} className={`mood-dot${i <= count ? ' ' + cls : ''}`} />
         ))}
       </div>
+      <span
+        onClick={e => { e.stopPropagation(); setOpen(o => !o) }}
+        style={{ fontSize: 11, color: 'var(--text-tertiary)', cursor: 'pointer', userSelect: 'none' }}
+        title="Click to change status"
+      >✎</span>
 
       {open && (
         <div
