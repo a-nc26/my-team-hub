@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const COLORS = [
   { bg: '#E6F1FB', color: '#185FA5' },
@@ -16,7 +16,7 @@ function fmt(date) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function AnalystModal({ analyst, meetings, onClose, onUpdate, showToast }) {
+export default function AnalystModal({ analyst, meetings, todos, setTodos, onClose, onUpdate, showToast }) {
   const [name, setName] = useState(analyst.name)
   const [role, setRole] = useState(analyst.role || '')
   const [mood, setMood] = useState(analyst.mood || 'm')
@@ -25,6 +25,53 @@ export default function AnalystModal({ analyst, meetings, onClose, onUpdate, sho
   const [saving, setSaving] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [expandedMeeting, setExpandedMeeting] = useState(null)
+  const [addingTodo, setAddingTodo] = useState(false)
+  const [newTodoText, setNewTodoText] = useState('')
+  const [showDoneTodos, setShowDoneTodos] = useState(false)
+  const todoInputRef = useRef(null)
+
+  useEffect(() => {
+    if (addingTodo) todoInputRef.current?.focus()
+  }, [addingTodo])
+
+  const analystTodos = (todos || []).filter(t => t.analystId === analyst.id)
+  const openTodos    = analystTodos.filter(t => !t.done)
+  const doneTodos    = analystTodos.filter(t => t.done)
+
+  async function addTodo() {
+    if (!newTodoText.trim()) return
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newTodoText.trim(), analystId: analyst.id, priority: 'normal' }),
+      })
+      if (!res.ok) throw new Error('Failed to add')
+      const todo = await res.json()
+      setTodos(prev => [todo, ...prev])
+      setNewTodoText('')
+      setAddingTodo(false)
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function toggleTodo(todo) {
+    try {
+      const res = await fetch(`/api/todos/${todo.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !todo.done }),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      const updated = await res.json()
+      setTodos(prev => prev.map(t => t.id === updated.id ? updated : t))
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function deleteTodo(id) {
+    try {
+      const res = await fetch(`/api/todos/${id}`, { method: 'DELETE' })
+      if (!res.ok) throw new Error('Failed to delete')
+      setTodos(prev => prev.filter(t => t.id !== id))
+    } catch (e) { showToast(e.message) }
+  }
 
   const c = COLORS[analyst.color ?? 0]
   const moodLabel = m => m === 'h' ? 'Thriving' : m === 'l' ? 'Needs attention' : 'Steady'
@@ -202,6 +249,84 @@ export default function AnalystModal({ analyst, meetings, onClose, onUpdate, sho
                 </div>
               ))}
             </div>
+          </>
+        )}
+
+        {/* Action items */}
+        {!analyst.pending && (
+          <>
+            <hr className="divider" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <div className="section-label" style={{ marginBottom: 0 }}>
+                Action items {openTodos.length > 0 && <span style={{ fontWeight: 400, color: 'var(--text-tertiary)' }}>({openTodos.length} open)</span>}
+              </div>
+              <button className="btn btn-sm" onClick={() => setAddingTodo(a => !a)}>+ Add</button>
+            </div>
+
+            {addingTodo && (
+              <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
+                <input
+                  ref={todoInputRef}
+                  value={newTodoText}
+                  onChange={e => setNewTodoText(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') addTodo()
+                    if (e.key === 'Escape') { setAddingTodo(false); setNewTodoText('') }
+                  }}
+                  placeholder={`e.g. Pair ${analyst.name.split(' ')[0]} with Jade on Q2`}
+                  style={{ flex: 1, padding: '5px 9px', fontSize: 13 }}
+                />
+                <button className="btn btn-primary btn-sm" onClick={addTodo} disabled={!newTodoText.trim()}>Add</button>
+                <button className="btn btn-sm" onClick={() => { setAddingTodo(false); setNewTodoText('') }}>✕</button>
+              </div>
+            )}
+
+            {analystTodos.length === 0 && !addingTodo && (
+              <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 6 }}>
+                No action items yet — add things that come out of your 1:1s.
+              </div>
+            )}
+
+            {/* Open todos */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+              {openTodos.map(t => (
+                <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '6px 0', borderBottom: '0.5px solid var(--border-light)' }}>
+                  <input type="checkbox" checked={false} onChange={() => toggleTodo(t)} style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }} />
+                  <span style={{ flex: 1, fontSize: 13, lineHeight: 1.4 }}>{t.text}</span>
+                  <button
+                    onClick={() => deleteTodo(t.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, opacity: 0.5, padding: '0 2px', flexShrink: 0 }}
+                    title="Delete">✕</button>
+                </div>
+              ))}
+            </div>
+
+            {/* Done todos toggle */}
+            {doneTodos.length > 0 && (
+              <div style={{ marginTop: 6 }}>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '2px 0' }}
+                  onClick={() => setShowDoneTodos(s => !s)}
+                >
+                  {showDoneTodos ? '▾' : '▸'} {doneTodos.length} completed
+                </button>
+                {showDoneTodos && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 1, marginTop: 4 }}>
+                    {doneTodos.map(t => (
+                      <div key={t.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', borderBottom: '0.5px solid var(--border-light)', opacity: 0.6 }}>
+                        <input type="checkbox" checked={true} onChange={() => toggleTodo(t)} style={{ marginTop: 2, cursor: 'pointer', flexShrink: 0 }} />
+                        <span style={{ flex: 1, fontSize: 13, textDecoration: 'line-through', color: 'var(--text-tertiary)', lineHeight: 1.4 }}>{t.text}</span>
+                        <button
+                          onClick={() => deleteTodo(t.id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, opacity: 0.5, padding: '0 2px', flexShrink: 0 }}
+                          title="Delete">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </>
         )}
 

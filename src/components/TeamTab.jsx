@@ -3,7 +3,7 @@ import { useState } from 'react'
 import AnalystCard from './AnalystCard'
 import AnalystModal from './AnalystModal'
 
-export default function TeamTab({ analysts, setAnalysts, meetings, loading, showToast }) {
+export default function TeamTab({ analysts, setAnalysts, meetings, todos, setTodos, loading, showToast }) {
   const [selected, setSelected] = useState(null)
 
   async function handleMoodChange(id, mood) {
@@ -51,6 +51,8 @@ export default function TeamTab({ analysts, setAnalysts, meetings, loading, show
         <AnalystModal
           analyst={selected}
           meetings={meetings}
+          todos={todos}
+          setTodos={setTodos}
           onClose={() => setSelected(null)}
           onUpdate={updated => {
             const id = updated.id || selected?.id
