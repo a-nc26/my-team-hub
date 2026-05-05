@@ -206,6 +206,101 @@ function CommentText({ text, analysts }) {
   )
 }
 
+// ── Project updates (inline feed, always visible) ─────────────────────────────
+function ProjectUpdates({ project, onNoteAdded, showToast }) {
+  const [text,     setText]     = useState('')
+  const [saving,   setSaving]   = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const inputRef = useRef(null)
+  const notes = project.projectNotes || []
+
+  function fmtDate(d) {
+    const date = new Date(d)
+    const now  = new Date()
+    const diff = Math.floor((now - date) / 86400000)
+    if (diff === 0) return 'Today'
+    if (diff === 1) return 'Yesterday'
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  async function handleAdd() {
+    if (!text.trim()) return
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/projects/${project.id}/notes`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text.trim() }),
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      const note = await res.json()
+      onNoteAdded(project.id, note)
+      setText('')
+    } catch (e) { showToast(e.message) }
+    finally { setSaving(false) }
+  }
+
+  async function handleDelete(noteId) {
+    try {
+      await fetch(`/api/projects/${project.id}/notes?noteId=${noteId}`, { method: 'DELETE' })
+      onNoteAdded(project.id, null, noteId)
+    } catch (e) { showToast(e.message) }
+  }
+
+  const preview = expanded ? notes : notes.slice(0, 3)
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 6 }}>
+        Updates {notes.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>({notes.length})</span>}
+      </div>
+
+      {/* Quick add */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: notes.length > 0 ? 8 : 0 }}>
+        <input
+          ref={inputRef}
+          value={text}
+          onChange={e => setText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleAdd()}
+          placeholder="Log an update… (Enter to save)"
+          style={{ flex: 1, padding: '5px 8px', fontSize: 12 }}
+        />
+        {text.trim() && (
+          <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={saving}>
+            {saving ? '…' : 'Add'}
+          </button>
+        )}
+      </div>
+
+      {/* Feed */}
+      {preview.map(n => (
+        <div key={n.id} style={{
+          display: 'flex', alignItems: 'flex-start', gap: 8,
+          padding: '5px 0', borderTop: '0.5px solid var(--border-light)',
+        }}>
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0, paddingTop: 2, minWidth: 52, textAlign: 'right' }}>
+            {fmtDate(n.createdAt)}
+          </span>
+          <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{n.text}</span>
+          <button
+            onClick={() => handleDelete(n.id)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
+            title="Delete">✕</button>
+        </div>
+      ))}
+
+      {notes.length > 3 && (
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '3px 0', marginTop: 2 }}
+          onClick={() => setExpanded(e => !e)}
+        >
+          {expanded ? '▴ Show less' : `▾ Show all ${notes.length} updates`}
+        </button>
+      )}
+    </div>
+  )
+}
+
 // ── Project comments ──────────────────────────────────────────────────────────
 function ProjectComments({ project, onNoteAdded, showToast, analysts }) {
   const [text,    setText]    = useState('')
@@ -738,16 +833,9 @@ function StatusSection({ status, projects, expanded, setExpanded, onEdit, confir
               )}
               {p.notes && <div className="project-notes-preview">{p.notes}</div>}
               <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
+              <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} />
               {expanded[p.id] && (
-                <>
-                  <AssignmentTable project={p} analysts={analysts} />
-                  <ProjectComments
-                    project={p}
-                    onNoteAdded={handleNoteChange}
-                    showToast={showToast}
-                    analysts={analysts}
-                  />
-                </>
+                <AssignmentTable project={p} analysts={analysts} />
               )}
             </div>
           ))}
