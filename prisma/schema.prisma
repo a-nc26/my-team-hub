@@ -76,6 +76,17 @@ model Project {
 
   analysts     ProjectAnalyst[]
   projectNotes ProjectNote[]
+  milestones   ProjectMilestone[]
+}
+
+model ProjectMilestone {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  title     String
+  dueDate   String?  // YYYY-MM-DD
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
 
 model ProjectNote {

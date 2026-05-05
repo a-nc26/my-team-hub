@@ -30,6 +30,7 @@ export async function PUT(req, { params }) {
       include: {
         analysts: { include: { analyst: true } },
         projectNotes: { orderBy: { createdAt: 'desc' } },
+        milestones:   { orderBy: { dueDate: 'asc' } },
       },
     })
     return NextResponse.json(project)

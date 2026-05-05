@@ -1,5 +1,5 @@
 'use client'
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red', hold: 'badge-gray' }
 const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked', hold: 'On Hold' }
@@ -442,6 +442,207 @@ function AssignmentTable({ project, analysts }) {
   )
 }
 
+// ── Project milestones ────────────────────────────────────────────────────────
+function ProjectMilestones({ project, onUpdate, showToast }) {
+  const [milestones, setMilestones]   = useState(project.milestones || [])
+  const [adding,     setAdding]       = useState(false)
+  const [newTitle,   setNewTitle]     = useState('')
+  const [newDate,    setNewDate]      = useState('')
+  const [editingId,  setEditingId]    = useState(null)
+  const [editTitle,  setEditTitle]    = useState('')
+  const [editDate,   setEditDate]     = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
+
+  // keep local milestones in sync if project prop changes
+  useEffect(() => { setMilestones(project.milestones || []) }, [project.milestones])
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  async function addMilestone() {
+    if (!newTitle.trim()) return
+    try {
+      const res = await fetch(`/api/projects/${project.id}/milestones`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: newTitle.trim(), dueDate: newDate || null }),
+      })
+      if (!res.ok) throw new Error('Failed to add milestone')
+      const m = await res.json()
+      const updated = [...milestones, m].sort((a, b) => (a.dueDate || '9') > (b.dueDate || '9') ? 1 : -1)
+      setMilestones(updated)
+      onUpdate(project.id, { milestones: updated })
+      setNewTitle(''); setNewDate(''); setAdding(false)
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function toggleDone(m) {
+    try {
+      const res = await fetch(`/api/projects/${project.id}/milestones/${m.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: !m.done }),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      const updated = await res.json()
+      const next = milestones.map(x => x.id === m.id ? updated : x)
+      setMilestones(next)
+      onUpdate(project.id, { milestones: next })
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function saveEdit(m) {
+    try {
+      const res = await fetch(`/api/projects/${project.id}/milestones/${m.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: editTitle.trim(), dueDate: editDate || null }),
+      })
+      if (!res.ok) throw new Error('Failed to update')
+      const updated = await res.json()
+      const next = milestones.map(x => x.id === m.id ? updated : x)
+        .sort((a, b) => (a.dueDate || '9') > (b.dueDate || '9') ? 1 : -1)
+      setMilestones(next)
+      onUpdate(project.id, { milestones: next })
+      setEditingId(null)
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function deleteMilestone(m) {
+    try {
+      await fetch(`/api/projects/${project.id}/milestones/${m.id}`, { method: 'DELETE' })
+      const next = milestones.filter(x => x.id !== m.id)
+      setMilestones(next)
+      onUpdate(project.id, { milestones: next })
+    } catch (e) { showToast(e.message) }
+  }
+
+  function fmtDate(d) {
+    if (!d) return null
+    const [y, mo, day] = d.split('-')
+    return new Date(y, mo - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const open     = milestones.filter(m => !m.done)
+  const done     = milestones.filter(m => m.done)
+  const overdue  = open.filter(m => m.dueDate && m.dueDate < today)
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+          Milestones
+        </span>
+        {overdue.length > 0 && (
+          <span style={{ fontSize: 10, background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+            {overdue.length} overdue
+          </span>
+        )}
+        {milestones.length > 0 && (
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
+            {done.length}/{milestones.length}
+          </span>
+        )}
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px' }}
+          onClick={() => setAdding(a => !a)}
+        >+ Add</button>
+      </div>
+
+      {/* Add form */}
+      {adding && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
+          <input
+            ref={inputRef}
+            value={newTitle}
+            onChange={e => setNewTitle(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') addMilestone(); if (e.key === 'Escape') { setAdding(false); setNewTitle(''); setNewDate('') } }}
+            placeholder="e.g. Submit first draft"
+            style={{ flex: '1 1 180px', padding: '4px 8px', fontSize: 12 }}
+          />
+          <input
+            type="date"
+            value={newDate}
+            onChange={e => setNewDate(e.target.value)}
+            style={{ width: 130, padding: '4px 6px', fontSize: 12 }}
+          />
+          <button className="btn btn-primary btn-sm" onClick={addMilestone} disabled={!newTitle.trim()}>Add</button>
+          <button className="btn btn-sm" onClick={() => { setAdding(false); setNewTitle(''); setNewDate('') }}>✕</button>
+        </div>
+      )}
+
+      {/* Milestone list */}
+      {milestones.length === 0 && !adding && (
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No milestones yet</div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {[...open, ...done].map(m => {
+          const isOverdue = !m.done && m.dueDate && m.dueDate < today
+          if (editingId === m.id) {
+            return (
+              <div key={m.id} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '3px 0' }}>
+                <input
+                  value={editTitle}
+                  onChange={e => setEditTitle(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') saveEdit(m); if (e.key === 'Escape') setEditingId(null) }}
+                  style={{ flex: '1 1 150px', padding: '3px 6px', fontSize: 12 }}
+                  autoFocus
+                />
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={e => setEditDate(e.target.value)}
+                  style={{ width: 125, padding: '3px 6px', fontSize: 12 }}
+                />
+                <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => saveEdit(m)}>Save</button>
+                <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setEditingId(null)}>Cancel</button>
+              </div>
+            )
+          }
+          return (
+            <div key={m.id} style={{
+              display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0',
+              borderBottom: '0.5px solid var(--border-light)',
+              opacity: m.done ? 0.55 : 1,
+            }}>
+              <input
+                type="checkbox"
+                checked={m.done}
+                onChange={() => toggleDone(m)}
+                style={{ cursor: 'pointer', flexShrink: 0 }}
+              />
+              <span style={{
+                flex: 1, fontSize: 12, lineHeight: 1.4,
+                textDecoration: m.done ? 'line-through' : 'none',
+                color: m.done ? 'var(--text-tertiary)' : 'var(--text-primary)',
+              }}>
+                {m.title}
+              </span>
+              {m.dueDate && (
+                <span style={{
+                  fontSize: 11, flexShrink: 0,
+                  color: isOverdue ? '#dc2626' : 'var(--text-tertiary)',
+                  fontWeight: isOverdue ? 600 : 400,
+                }}>
+                  {isOverdue ? '⚠ ' : ''}{fmtDate(m.dueDate)}
+                </span>
+              )}
+              <button
+                onClick={() => { setEditingId(m.id); setEditTitle(m.title); setEditDate(m.dueDate || '') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, padding: '0 2px', flexShrink: 0 }}
+                title="Edit">✏️</button>
+              <button
+                onClick={() => deleteMilestone(m)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.5, padding: '0 2px', flexShrink: 0 }}
+                title="Delete">✕</button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Project edit modal ────────────────────────────────────────────────────────
 function ProjectEditModal({ project, analysts, onSave, onClose }) {
   function handleOverlayClick(e) {
@@ -463,7 +664,7 @@ function ProjectEditModal({ project, analysts, onSave, onClose }) {
 }
 
 // ── Status section (collapsible group of projects by status) ──────────────────
-function StatusSection({ status, projects, expanded, setExpanded, onEdit, confirmDelete, setConfirmDelete, analysts, handleDelete, handleNoteChange, showToast, sectionCollapsed, onToggleSection }) {
+function StatusSection({ status, projects, expanded, setExpanded, onEdit, confirmDelete, setConfirmDelete, analysts, handleDelete, handleNoteChange, onProjectUpdate, showToast, sectionCollapsed, onToggleSection }) {
   if (projects.length === 0) return null
   const label = STATUS_LABELS[status] || status
   const icon  = STATUS_ICONS[status]  || '📁'
@@ -536,6 +737,7 @@ function StatusSection({ status, projects, expanded, setExpanded, onEdit, confir
                 </div>
               )}
               {p.notes && <div className="project-notes-preview">{p.notes}</div>}
+              <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
               {expanded[p.id] && (
                 <>
                   <AssignmentTable project={p} analysts={analysts} />
@@ -562,6 +764,11 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
   const [confirmDelete,   setConfirmDelete]   = useState(null)
   const [expanded,        setExpanded]        = useState({})
   const [sectionCollapsed, setSectionCollapsed] = useState({ done: true, hold: false })
+
+  // Called when milestones change on a project
+  const handleProjectUpdate = useCallback((projectId, patch) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...patch } : p))
+  }, [setProjects])
 
   // Called when a note is added (note = new note object) or deleted (note = null, noteId provided)
   const handleNoteChange = useCallback((projectId, note, deletedNoteId) => {
@@ -645,6 +852,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
             analysts={analysts}
             handleDelete={handleDelete}
             handleNoteChange={handleNoteChange}
+            onProjectUpdate={handleProjectUpdate}
             showToast={showToast}
             sectionCollapsed={!!sectionCollapsed[status]}
             onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, [status]: !prev[status] }))}
@@ -669,6 +877,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
             analysts={analysts}
             handleDelete={handleDelete}
             handleNoteChange={handleNoteChange}
+            onProjectUpdate={handleProjectUpdate}
             showToast={showToast}
             sectionCollapsed={!!sectionCollapsed['other']}
             onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, other: !prev.other }))}

@@ -7,6 +7,7 @@ export async function GET() {
       include: {
         analysts: { include: { analyst: true } },
         projectNotes: { orderBy: { createdAt: 'desc' } },
+        milestones:   { orderBy: { dueDate: 'asc' } },
       },
       orderBy: { createdAt: 'desc' },
     })
@@ -47,6 +48,7 @@ export async function POST(req) {
       include: {
         analysts: { include: { analyst: true } },
         projectNotes: { orderBy: { createdAt: 'desc' } },
+        milestones:   { orderBy: { dueDate: 'asc' } },
       },
     })
     return NextResponse.json(project, { status: 201 })
