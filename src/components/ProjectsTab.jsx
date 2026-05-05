@@ -442,8 +442,28 @@ function AssignmentTable({ project, analysts }) {
   )
 }
 
+// ── Project edit modal ────────────────────────────────────────────────────────
+function ProjectEditModal({ project, analysts, onSave, onClose }) {
+  function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) onClose()
+  }
+  return (
+    <div className="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal-box" style={{ maxWidth: 600 }}>
+        <div className="modal-header">
+          <div style={{ fontWeight: 600, fontSize: 15 }}>Edit project</div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕</button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <ProjectForm initial={project} analysts={analysts} onSave={onSave} onCancel={onClose} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Status section (collapsible group of projects by status) ──────────────────
-function StatusSection({ status, projects, expanded, setExpanded, editing, setEditing, confirmDelete, setConfirmDelete, analysts, handleUpdate, handleDelete, handleNoteChange, showToast, sectionCollapsed, onToggleSection }) {
+function StatusSection({ status, projects, expanded, setExpanded, onEdit, confirmDelete, setConfirmDelete, analysts, handleDelete, handleNoteChange, showToast, sectionCollapsed, onToggleSection }) {
   if (projects.length === 0) return null
   const label = STATUS_LABELS[status] || status
   const icon  = STATUS_ICONS[status]  || '📁'
@@ -472,65 +492,59 @@ function StatusSection({ status, projects, expanded, setExpanded, editing, setEd
         <div className="projects-list">
           {projects.map(p => (
             <div key={p.id} className="card">
-              {editing?.id === p.id ? (
-                <ProjectForm initial={editing} analysts={analysts} onSave={handleUpdate} onCancel={() => setEditing(null)} />
-              ) : (
-                <>
-                  <div className="project-title-row">
-                    <span className="project-name">{p.name}</span>
-                    <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>
-                      {p.type === 'google' ? 'Google' : 'Side'}
+              <div className="project-title-row">
+                <span className="project-name">{p.name}</span>
+                <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>
+                  {p.type === 'google' ? 'Google' : 'Side'}
+                </span>
+                <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>
+                  {STATUS_LABELS[p.status] || p.status}
+                </span>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
+                  {(p.projectNotes?.length > 0) && !expanded[p.id] && (
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>
+                      💬 {p.projectNotes.length}
                     </span>
-                    <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>
-                      {STATUS_LABELS[p.status] || p.status}
-                    </span>
-                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-                      {(p.projectNotes?.length > 0) && !expanded[p.id] && (
-                        <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>
-                          💬 {p.projectNotes.length}
-                        </span>
-                      )}
-                      <button className="btn btn-ghost btn-sm"
-                        onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
-                        {expanded[p.id] ? 'Hide ▲' : 'Details ▼'}
-                      </button>
-                      <button className="btn btn-ghost btn-sm" onClick={() => setEditing(p)}>Edit</button>
-                      {confirmDelete === p.id ? (
-                        <>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
-                          <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
-                        </>
-                      ) : (
-                        <button className="btn btn-ghost btn-sm"
-                          style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
-                          onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
-                      )}
-                    </div>
-                  </div>
-                  {(p.startDate || p.endDate) && (
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      <span>📅</span>
-                      {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                      {p.startDate && p.endDate && <span>→</span>}
-                      {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                      {p.startDate && p.endDate && (() => {
-                        const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
-                        return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
-                      })()}
-                    </div>
                   )}
-                  {p.notes && <div className="project-notes-preview">{p.notes}</div>}
-                  {expanded[p.id] && (
+                  <button className="btn btn-ghost btn-sm"
+                    onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                    {expanded[p.id] ? 'Hide ▲' : 'Details ▼'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)}>✏️ Edit</button>
+                  {confirmDelete === p.id ? (
                     <>
-                      <AssignmentTable project={p} analysts={analysts} />
-                      <ProjectComments
-                        project={p}
-                        onNoteAdded={handleNoteChange}
-                        showToast={showToast}
-                        analysts={analysts}
-                      />
+                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
+                      <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
                     </>
+                  ) : (
+                    <button className="btn btn-ghost btn-sm"
+                      style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
+                      onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
                   )}
+                </div>
+              </div>
+              {(p.startDate || p.endDate) && (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
+                  <span>📅</span>
+                  {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                  {p.startDate && p.endDate && <span>→</span>}
+                  {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                  {p.startDate && p.endDate && (() => {
+                    const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
+                    return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
+                  })()}
+                </div>
+              )}
+              {p.notes && <div className="project-notes-preview">{p.notes}</div>}
+              {expanded[p.id] && (
+                <>
+                  <AssignmentTable project={p} analysts={analysts} />
+                  <ProjectComments
+                    project={p}
+                    onNoteAdded={handleNoteChange}
+                    showToast={showToast}
+                    analysts={analysts}
+                  />
                 </>
               )}
             </div>
@@ -579,7 +593,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
       })
       if (!res.ok) throw new Error('Failed to update project')
       const updated = await res.json()
-      setProjects(prev => prev.map(x => x.id === updated.id ? updated : x))
+      setProjects(prev => prev.map(x => x.id === updated.id ? { ...x, ...updated } : x))
       setEditing(null)
     } catch (e) { showToast(e.message) }
   }
@@ -625,12 +639,10 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
             projects={group}
             expanded={expanded}
             setExpanded={setExpanded}
-            editing={editing}
-            setEditing={setEditing}
+            onEdit={p => setEditing(p)}
             confirmDelete={confirmDelete}
             setConfirmDelete={setConfirmDelete}
             analysts={analysts}
-            handleUpdate={handleUpdate}
             handleDelete={handleDelete}
             handleNoteChange={handleNoteChange}
             showToast={showToast}
@@ -651,12 +663,10 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
             projects={unknown}
             expanded={expanded}
             setExpanded={setExpanded}
-            editing={editing}
-            setEditing={setEditing}
+            onEdit={p => setEditing(p)}
             confirmDelete={confirmDelete}
             setConfirmDelete={setConfirmDelete}
             analysts={analysts}
-            handleUpdate={handleUpdate}
             handleDelete={handleDelete}
             handleNoteChange={handleNoteChange}
             showToast={showToast}
@@ -665,6 +675,16 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
           />
         )
       })()}
+
+      {/* Edit modal */}
+      {editing && (
+        <ProjectEditModal
+          project={editing}
+          analysts={analysts}
+          onSave={handleUpdate}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
