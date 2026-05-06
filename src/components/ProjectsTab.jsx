@@ -249,13 +249,15 @@ function ProjectUpdates({ project, onNoteAdded, showToast }) {
   const preview = expanded ? notes : notes.slice(0, 3)
 
   return (
-    <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 6 }}>
-        Updates {notes.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>({notes.length})</span>}
-      </div>
+    <div style={{ marginTop: 8 }}>
+      {notes.length > 0 && (
+        <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 6 }}>
+          Updates <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>({notes.length})</span>
+        </div>
+      )}
 
       {/* Quick add */}
-      <div style={{ display: 'flex', gap: 6, marginBottom: notes.length > 0 ? 8 : 0 }}>
+      <div style={{ display: 'flex', gap: 6, marginBottom: notes.length > 0 ? 6 : 0 }}>
         <input
           ref={inputRef}
           value={text}
@@ -622,26 +624,24 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
 
   return (
     <div style={{ marginTop: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-          Milestones
-        </span>
-        {overdue.length > 0 && (
-          <span style={{ fontSize: 10, background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
-            {overdue.length} overdue
+      {milestones.length > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+          <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
+            Milestones
           </span>
-        )}
-        {milestones.length > 0 && (
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>
-            {done.length}/{milestones.length}
-          </span>
-        )}
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px' }}
-          onClick={() => setAdding(a => !a)}
-        >+ Add</button>
-      </div>
+          {overdue.length > 0 && (
+            <span style={{ fontSize: 10, background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
+              {overdue.length} overdue
+            </span>
+          )}
+          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{done.length}/{milestones.length}</span>
+          <button
+            className="btn btn-ghost btn-sm"
+            style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px' }}
+            onClick={() => setAdding(a => !a)}
+          >+ Add</button>
+        </div>
+      )}
 
       {/* Add form */}
       {adding && (
@@ -667,28 +667,27 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
 
       {/* Milestone list */}
       {milestones.length === 0 && !adding && (
-        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontStyle: 'italic' }}>No milestones yet</div>
+        <button
+          className="btn btn-ghost btn-sm"
+          style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '0', marginBottom: 4 }}
+          onClick={() => setAdding(true)}
+        >+ Add a milestone</button>
       )}
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <div style={{ width: '100%' }}>
         {[...open, ...done].map(m => {
           const isOverdue = !m.done && m.dueDate && m.dueDate < today
           if (editingId === m.id) {
             return (
-              <div key={m.id} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '3px 0' }}>
+              <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '4px 6px', padding: '4px 0', alignItems: 'center' }}>
                 <input
                   value={editTitle}
                   onChange={e => setEditTitle(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveEdit(m); if (e.key === 'Escape') setEditingId(null) }}
-                  style={{ flex: '1 1 150px', padding: '3px 6px', fontSize: 12 }}
+                  style={{ padding: '3px 6px', fontSize: 12, gridColumn: '1' }}
                   autoFocus
                 />
-                <input
-                  type="date"
-                  value={editDate}
-                  onChange={e => setEditDate(e.target.value)}
-                  style={{ width: 125, padding: '3px 6px', fontSize: 12 }}
-                />
+                <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ width: 120, padding: '3px 6px', fontSize: 12 }} />
                 <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => saveEdit(m)}>Save</button>
                 <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setEditingId(null)}>Cancel</button>
               </div>
@@ -696,39 +695,36 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
           }
           return (
             <div key={m.id} style={{
-              display: 'flex', alignItems: 'center', gap: 7, padding: '3px 0',
+              display: 'grid',
+              gridTemplateColumns: '16px 1fr auto auto auto',
+              gap: '0 8px',
+              alignItems: 'center',
+              padding: '5px 0',
               borderBottom: '0.5px solid var(--border-light)',
+              width: '100%',
               opacity: m.done ? 0.55 : 1,
             }}>
-              <input
-                type="checkbox"
-                checked={m.done}
-                onChange={() => toggleDone(m)}
-                style={{ cursor: 'pointer', flexShrink: 0 }}
-              />
+              <input type="checkbox" checked={m.done} onChange={() => toggleDone(m)} style={{ cursor: 'pointer', margin: 0 }} />
               <span style={{
-                flex: 1, fontSize: 12, lineHeight: 1.4,
+                fontSize: 12, lineHeight: 1.4, minWidth: 0,
+                wordBreak: 'break-word',
                 textDecoration: m.done ? 'line-through' : 'none',
                 color: m.done ? 'var(--text-tertiary)' : 'var(--text-primary)',
               }}>
                 {m.title}
               </span>
-              {m.dueDate && (
-                <span style={{
-                  fontSize: 11, flexShrink: 0,
-                  color: isOverdue ? '#dc2626' : 'var(--text-tertiary)',
-                  fontWeight: isOverdue ? 600 : 400,
-                }}>
-                  {isOverdue ? '⚠ ' : ''}{fmtDate(m.dueDate)}
-                </span>
-              )}
-              <button
-                onClick={() => { setEditingId(m.id); setEditTitle(m.title); setEditDate(m.dueDate || '') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, padding: '0 2px', flexShrink: 0 }}
+              <span style={{
+                fontSize: 11, whiteSpace: 'nowrap',
+                color: isOverdue ? '#dc2626' : 'var(--text-tertiary)',
+                fontWeight: isOverdue ? 600 : 400,
+              }}>
+                {m.dueDate ? `${isOverdue ? '⚠ ' : ''}${fmtDate(m.dueDate)}` : ''}
+              </span>
+              <button onClick={() => { setEditingId(m.id); setEditTitle(m.title); setEditDate(m.dueDate || '') }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, padding: '0 2px' }}
                 title="Edit">✏️</button>
-              <button
-                onClick={() => deleteMilestone(m)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.5, padding: '0 2px', flexShrink: 0 }}
+              <button onClick={() => deleteMilestone(m)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.5, padding: '0 2px' }}
                 title="Delete">✕</button>
             </div>
           )
@@ -832,8 +828,10 @@ function StatusSection({ status, projects, expanded, setExpanded, onEdit, confir
                 </div>
               )}
               {p.notes && <div className="project-notes-preview">{p.notes}</div>}
-              <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
-              <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} />
+              <div style={{ borderTop: '0.5px solid var(--border-light)', marginTop: 8, paddingTop: 8 }}>
+                <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
+                <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} />
+              </div>
               {expanded[p.id] && (
                 <AssignmentTable project={p} analysts={analysts} />
               )}
