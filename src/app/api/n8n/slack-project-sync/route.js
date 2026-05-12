@@ -51,35 +51,44 @@ export async function POST(req) {
 
     const today = new Date().toISOString().slice(0, 10)
 
+    // Fetch team members for analyst context
+    const teamMembers = await prisma.analyst.findMany({ select: { id: true, name: true }, where: { pending: false } })
+    const analystContext = teamMembers.length > 0
+      ? teamMembers.map(a => `- "${a.name}" [id:${a.id}]`).join('\n')
+      : '(none)'
+
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
-      max_tokens: 1024,
-      system: `You analyze Slack messages to extract project-relevant updates for a Trust & Safety team.
+      max_tokens: 1500,
+      system: `You analyze Slack messages to extract actionable updates for a Trust & Safety team lead.
 Today: ${today}
 
 Current projects:
 ${projectContext}
 
-Extract only items that clearly relate to work progress: blockers, status changes, milestones reached, deadlines mentioned, or meaningful updates.
-Ignore casual conversation, off-topic messages, and social messages.
+Team members:
+${analystContext}
 
-Return ONLY a valid JSON array with this shape:
+Extract items that are clearly work-relevant: progress updates, blockers, status changes, milestones reached, or team member status (absent, done with something, blocked).
+Ignore purely social messages and off-topic conversation.
+
+Return ONLY a valid JSON array:
 [{
-  "projectId": "<id from list above, or null if unknown/new>",
-  "projectName": "<matched or inferred name>",
-  "type": "update|status|milestone|new",
-  "content": "<concise summary of the update, 1-2 sentences>",
-  "confidence": <0.0 to 1.0>,
-  "suggestedStatus": "<active|review|blocked|hold|done, only for type=status>"
+  "relatedTo": "project" | "analyst",
+  "projectId": "<matched project id or null>",
+  "projectName": "<matched project name or null>",
+  "analystId": "<matched analyst id or null>",
+  "analystName": "<analyst name or null>",
+  "type": "update" | "status" | "milestone" | "new" | "analyst",
+  "content": "<concise 1-2 sentence summary>",
+  "confidence": <0.6–1.0>,
+  "suggestedStatus": "<active|review|blocked|hold|done, only when type=status>"
 }]
 
-Types:
-- update: progress note to log
-- status: project status changed (include suggestedStatus)
-- milestone: a checkpoint was reached
-- new: a brand new project was mentioned
-
-Only include items with confidence >= 0.6. Return [] if nothing relevant.`,
+- relatedTo="analyst" when primarily about a person (absent, done with personal task, availability)
+- relatedTo="project" for project progress, blockers, status changes
+- Match by name similarity
+- Only include confidence >= 0.6. Return [] if nothing relevant.`,
       messages: [{
         role: 'user',
         content: `Slack messages from #${body.channel || 'general'}:\n\n${rawMessages}`,

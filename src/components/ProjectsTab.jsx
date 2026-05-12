@@ -1,6 +1,24 @@
 'use client'
 import { useState, useCallback, useRef, useEffect } from 'react'
 
+// ── Design tokens ─────────────────────────────────────────────────────────────
+const TYPE_CONFIG = {
+  google:   { label: 'Google',   color: '#4285f4', bg: '#e8f0fe' },
+  research: { label: 'Research', color: '#9333ea', bg: '#f5f3ff' },
+  eval:     { label: 'Eval',     color: '#ea580c', bg: '#fff7ed' },
+  external: { label: 'External', color: '#0891b2', bg: '#ecfeff' },
+  side:     { label: 'Side',     color: '#6b7280', bg: '#f3f4f6' },
+  personal: { label: 'Personal', color: '#059669', bg: '#ecfdf5' },
+}
+const STATUS_CONFIG = {
+  active:  { label: 'Active',    color: '#16a34a', bg: '#dcfce7' },
+  review:  { label: 'In Review', color: '#2563eb', bg: '#dbeafe' },
+  blocked: { label: 'Blocked',   color: '#dc2626', bg: '#fee2e2' },
+  hold:    { label: 'On Hold',   color: '#d97706', bg: '#fef3c7' },
+  done:    { label: 'Done',      color: '#6b7280', bg: '#f3f4f6' },
+}
+const ANALYST_COLORS = ['#e03131','#2f9e44','#1971c2','#e8590c','#7048e8','#0c8599','#c2255c','#5c940d','#862e9c','#0b7285']
+
 // ── Project Chat Panel ────────────────────────────────────────────────────────
 function ProjectChatPanel({ onClose, onProjectsChanged }) {
   const WELCOME = "Hi! I can help you manage your projects conversationally. Try:\n• \"Add a new Google project called X, deadline June 15\"\n• \"Mark the Agent Debate project as In Review\"\n• \"Add a milestone to X: draft done by May 20\"\n• \"Log an update on Y: data collection complete\""
@@ -122,7 +140,7 @@ function ProjectChatPanel({ onClose, onProjectsChanged }) {
 }
 
 // ── Slack Suggestions Banner ──────────────────────────────────────────────────
-function SlackSuggestionsBanner({ suggestions, projects, onApply, onDismissAll }) {
+function SlackSuggestionsBanner({ suggestions, projects, analysts, onApply, onDismiss, onDismissAll }) {
   const [applying, setApplying] = useState(null)
 
   async function apply(s) {
@@ -131,56 +149,72 @@ function SlackSuggestionsBanner({ suggestions, projects, onApply, onDismissAll }
     setApplying(null)
   }
 
-  const TYPE_LABEL = { update: '📝 Update', status: '🔄 Status change', milestone: '🏁 Milestone', new: '✨ New project' }
-  const CONF_COLOR = c => c >= 0.85 ? '#16a34a' : c >= 0.7 ? '#ca8a04' : 'var(--text-tertiary)'
+  const TYPE_ICON  = { update: '📝', status: '🔄', milestone: '🏁', new: '✨', analyst: '👤' }
+  const TYPE_LABEL = { update: 'Update', status: 'Status change', milestone: 'Milestone', new: 'New project', analyst: 'Analyst note' }
 
   return (
     <div style={{
-      background: 'var(--bg-card)', border: '1px solid #3b82f6', borderRadius: 'var(--radius)',
-      padding: '12px 14px', marginBottom: 16,
+      background: 'var(--bg-card)',
+      border: '1px solid #3b82f6', borderLeft: '3px solid #3b82f6',
+      borderRadius: 'var(--radius)', padding: '12px 14px', marginBottom: 16,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-        <span style={{ fontSize: 15 }}>🔔</span>
-        <span style={{ fontWeight: 600, fontSize: 14 }}>Slack suggestions</span>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-          {suggestions.length} item{suggestions.length !== 1 ? 's' : ''} from today
-        </span>
+        <span style={{ fontSize: 16 }}>💬</span>
+        <span style={{ fontWeight: 700, fontSize: 13 }}>Slack suggestions</span>
+        <span style={{
+          fontSize: 11, fontWeight: 600, color: '#2563eb', background: '#dbeafe',
+          padding: '1px 7px', borderRadius: 10,
+        }}>{suggestions.length}</span>
         <button onClick={onDismissAll} style={{
           marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: 12, color: 'var(--text-tertiary)',
-        }}>Dismiss all ✕</button>
+          fontSize: 11, color: 'var(--text-tertiary)',
+        }}>Dismiss all</button>
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {suggestions.map((s, i) => {
           const matched = projects.find(p => p.id === s.projectId)
+          const matchedAnalyst = analysts?.find(a => a.name?.toLowerCase().includes(s.analystName?.toLowerCase() || '___'))
+          const isAnalyst = s.relatedTo === 'analyst'
+          const accentColor = isAnalyst ? '#059669' : '#2563eb'
+          const confPct = Math.round((s.confidence || 0) * 100)
+
           return (
             <div key={i} style={{
-              display: 'grid', gridTemplateColumns: '1fr auto',
-              gap: '4px 10px', alignItems: 'center',
-              padding: '8px 10px', borderRadius: 6,
+              display: 'grid', gridTemplateColumns: '1fr auto auto',
+              gap: '0 8px', alignItems: 'center',
+              padding: '9px 11px', borderRadius: 6,
               background: 'var(--bg-secondary)',
               border: '0.5px solid var(--border-light)',
+              borderLeft: `2px solid ${accentColor}`,
             }}>
               <div>
-                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{TYPE_LABEL[s.type] || s.type}</span>
-                  <span style={{ fontSize: 11, fontWeight: 600 }}>{matched?.name || s.projectName}</span>
-                  <span style={{ fontSize: 10, color: CONF_COLOR(s.confidence) }}>
-                    {Math.round(s.confidence * 100)}% confident
+                <div style={{ display: 'flex', gap: 5, alignItems: 'center', marginBottom: 3, flexWrap: 'wrap' }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px',
+                    color: accentColor, background: isAnalyst ? '#ecfdf5' : '#dbeafe',
+                    padding: '1px 5px', borderRadius: 3,
+                  }}>{TYPE_ICON[s.type] || ''} {TYPE_LABEL[s.type] || s.type}</span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {isAnalyst ? (s.analystName || 'Team member') : (matched?.name || s.projectName)}
+                  </span>
+                  <span style={{ fontSize: 10, color: confPct >= 85 ? '#16a34a' : confPct >= 70 ? '#d97706' : 'var(--text-tertiary)' }}>
+                    {confPct}% match
                   </span>
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{s.content}</div>
               </div>
-              <button
-                onClick={() => apply(s)}
-                disabled={applying === s}
-                style={{
-                  padding: '5px 10px', borderRadius: 6, border: 'none',
-                  background: 'var(--accent-blue, #3b82f6)', color: '#fff',
-                  fontSize: 12, fontWeight: 600, cursor: applying === s ? 'not-allowed' : 'pointer',
-                  opacity: applying === s ? 0.6 : 1, whiteSpace: 'nowrap',
-                }}
-              >{applying === s ? '…' : 'Apply'}</button>
+              <button onClick={() => apply(s)} disabled={applying === s} style={{
+                padding: '4px 10px', borderRadius: 6, border: 'none',
+                background: accentColor, color: '#fff',
+                fontSize: 11, fontWeight: 600,
+                cursor: applying === s ? 'not-allowed' : 'pointer',
+                opacity: applying === s ? 0.6 : 1, whiteSpace: 'nowrap',
+              }}>{applying === s ? '…' : 'Apply'}</button>
+              <button onClick={() => onDismiss(s)} style={{
+                padding: '4px 6px', borderRadius: 6, border: '0.5px solid var(--border-light)',
+                background: 'none', cursor: 'pointer', fontSize: 13,
+                color: 'var(--text-tertiary)', lineHeight: 1,
+              }}>✕</button>
             </div>
           )
         })}
@@ -628,8 +662,12 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
         <div className="form-group">
           <label>Type</label>
           <select value={type} onChange={e => setType(e.target.value)}>
-            <option value="google">Google</option>
-            <option value="side">Side project</option>
+            <option value="google">🔷 Google</option>
+            <option value="research">🔬 Research</option>
+            <option value="eval">📊 Eval</option>
+            <option value="external">🤝 External</option>
+            <option value="side">⚡ Side</option>
+            <option value="personal">👤 Personal</option>
           </select>
         </div>
         <div className="form-group">
@@ -955,76 +993,173 @@ function StatusSection({ status, projects, expanded, setExpanded, onEdit, confir
         onClick={onToggleSection}
         style={{
           display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-          padding: '6px 2px', userSelect: 'none', marginBottom: 6,
+          padding: '7px 4px', userSelect: 'none', marginBottom: 6,
+          borderBottom: sectionCollapsed ? 'none' : '0.5px solid var(--border-light)',
+          paddingBottom: sectionCollapsed ? 7 : 10,
         }}
       >
         <span style={{
-          fontSize: 11, color: 'var(--text-tertiary)', display: 'inline-block',
-          transition: 'transform .2s', transform: sectionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
+          fontSize: 10, color: 'var(--text-tertiary)', display: 'inline-block',
+          transition: 'transform .15s', transform: sectionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
         }}>▾</span>
-        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.2px' }}>{icon} {label}</span>
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-          {projects.length} project{projects.length !== 1 ? 's' : ''}
-        </span>
+        <span style={{
+          width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
+          background: STATUS_CONFIG[status]?.color || 'var(--text-tertiary)',
+        }} />
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.1px' }}>{label}</span>
+        <span style={{
+          fontSize: 11, fontWeight: 700,
+          color: STATUS_CONFIG[status]?.color || 'var(--text-tertiary)',
+          background: STATUS_CONFIG[status]?.bg || 'var(--bg-secondary)',
+          padding: '1px 7px', borderRadius: 10,
+        }}>{projects.length}</span>
       </div>
 
       {!sectionCollapsed && (
-        <div className="projects-list">
-          {projects.map(p => (
-            <div key={p.id} className="card">
-              <div className="project-title-row">
-                <span className="project-name">{p.name}</span>
-                <span className={`badge ${p.type === 'google' ? 'badge-blue' : 'badge-gray'}`}>
-                  {p.type === 'google' ? 'Google' : 'Side'}
-                </span>
-                <span className={`badge ${STATUS_BADGE[p.status] || 'badge-gray'}`}>
-                  {STATUS_LABELS[p.status] || p.status}
-                </span>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, alignItems: 'center' }}>
-                  {(p.projectNotes?.length > 0) && !expanded[p.id] && (
-                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginRight: 2 }}>
-                      💬 {p.projectNotes.length}
-                    </span>
-                  )}
-                  <button className="btn btn-ghost btn-sm"
-                    onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
-                    {expanded[p.id] ? 'Hide ▲' : 'Details ▼'}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onEdit(p)}>✏️ Edit</button>
-                  {confirmDelete === p.id ? (
-                    <>
-                      <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
-                      <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
-                    </>
-                  ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {projects.map(p => {
+            const tc = TYPE_CONFIG[p.type] || TYPE_CONFIG.side
+            const sc = STATUS_CONFIG[p.status] || STATUS_CONFIG.active
+            const milestoneCount = p.milestones?.length || 0
+            const doneMilestones = p.milestones?.filter(m => m.done).length || 0
+            const lastNote = p.projectNotes?.[0]
+            const daysLeft = p.endDate ? Math.round((new Date(p.endDate) - new Date()) / 86400000) : null
+
+            return (
+              <div key={p.id} style={{
+                background: 'var(--bg-card)',
+                border: '0.5px solid var(--border-light)',
+                borderLeft: `3px solid ${tc.color}`,
+                borderRadius: 'var(--radius)',
+                padding: '11px 14px',
+              }}>
+                {/* Row 1: type chip · status pill · actions */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase',
+                    color: tc.color, background: tc.bg, padding: '2px 6px', borderRadius: 3,
+                  }}>{tc.label}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.2px',
+                    color: sc.color, background: sc.bg, padding: '2px 8px', borderRadius: 10,
+                  }}>{sc.label}</span>
+                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
                     <button className="btn btn-ghost btn-sm"
-                      style={{ color: 'var(--text-tertiary)', fontSize: 15, opacity: 0.6 }}
-                      onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
+                      style={{ fontSize: 12, padding: '3px 8px' }}
+                      onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
+                      {expanded[p.id] ? '▲ Less' : '▾ Details'}
+                    </button>
+                    <button className="btn btn-ghost btn-sm"
+                      style={{ fontSize: 13, padding: '3px 6px' }}
+                      onClick={() => onEdit(p)} title="Edit">✏️</button>
+                    {confirmDelete === p.id ? (
+                      <>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
+                        <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                      </>
+                    ) : (
+                      <button className="btn btn-ghost btn-sm"
+                        style={{ color: 'var(--text-tertiary)', fontSize: 15, padding: '3px 6px', opacity: 0.5 }}
+                        onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Row 2: project name */}
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 7 }}>
+                  {p.name}
+                </div>
+
+                {/* Row 3: analyst avatars + dates */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                  {p.analysts?.length > 0 && (
+                    <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                      {p.analysts.slice(0, 7).map(pa => {
+                        const a = analysts.find(x => x.id === pa.analystId) || pa.analyst
+                        if (!a) return null
+                        const color = ANALYST_COLORS[(a.color || 0) % ANALYST_COLORS.length]
+                        return (
+                          <div key={pa.analystId} title={a.name} style={{
+                            width: 22, height: 22, borderRadius: '50%',
+                            background: color, color: '#fff',
+                            fontSize: 9, fontWeight: 700,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            border: '1.5px solid var(--bg-card)',
+                          }}>{a.initials}</div>
+                        )
+                      })}
+                      {p.analysts.length > 7 && (
+                        <div style={{
+                          width: 22, height: 22, borderRadius: '50%',
+                          background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+                          fontSize: 9, fontWeight: 700,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>+{p.analysts.length - 7}</div>
+                      )}
+                    </div>
+                  )}
+                  {(p.startDate || p.endDate) && (
+                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)' }}>
+                      <span>📅</span>
+                      {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
+                      {p.startDate && p.endDate && <span>→</span>}
+                      {p.endDate && <span style={{ color: daysLeft !== null && daysLeft < 7 && daysLeft >= 0 ? '#dc2626' : 'inherit' }}>
+                        {new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </span>}
+                      {daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && (
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>· {daysLeft}d left</span>
+                      )}
+                      {daysLeft !== null && daysLeft < 0 && (
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>· Overdue</span>
+                      )}
+                    </div>
                   )}
                 </div>
+
+                {/* Row 4: description (1 line, truncated) */}
+                {p.notes && (
+                  <div style={{
+                    fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    lineHeight: 1.4,
+                  }}>{p.notes}</div>
+                )}
+
+                {/* Bottom summary strip (collapsed only) */}
+                {!expanded[p.id] && (milestoneCount > 0 || lastNote) && (
+                  <div style={{
+                    display: 'flex', gap: 12, alignItems: 'center',
+                    paddingTop: 7, marginTop: 4,
+                    borderTop: '0.5px solid var(--border-light)',
+                    fontSize: 11, color: 'var(--text-tertiary)',
+                  }}>
+                    {milestoneCount > 0 && (
+                      <span style={{
+                        fontWeight: 600, whiteSpace: 'nowrap',
+                        color: doneMilestones === milestoneCount ? '#16a34a' : 'var(--text-tertiary)',
+                      }}>
+                        ✓ {doneMilestones}/{milestoneCount}
+                      </span>
+                    )}
+                    {lastNote && (
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                        💬 {lastNote.text.slice(0, 90)}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Expanded: milestones + updates + assignments */}
+                {expanded[p.id] && (
+                  <div style={{ borderTop: '0.5px solid var(--border-light)', marginTop: 8, paddingTop: 8 }}>
+                    <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
+                    <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} analysts={analysts} />
+                    <AssignmentTable project={p} analysts={analysts} />
+                  </div>
+                )}
               </div>
-              {(p.startDate || p.endDate) && (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 6, fontSize: 12, color: 'var(--text-tertiary)' }}>
-                  <span>📅</span>
-                  {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                  {p.startDate && p.endDate && <span>→</span>}
-                  {p.endDate && <span>{new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                  {p.startDate && p.endDate && (() => {
-                    const days = Math.round((new Date(p.endDate) - new Date(p.startDate)) / 86400000)
-                    return days > 0 ? <span style={{ color: 'var(--accent-blue)', fontWeight: 500 }}>· {days}d</span> : null
-                  })()}
-                </div>
-              )}
-              {p.notes && <div className="project-notes-preview">{p.notes}</div>}
-              <div style={{ borderTop: '0.5px solid var(--border-light)', marginTop: 8, paddingTop: 8 }}>
-                <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
-                <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} />
-              </div>
-              {expanded[p.id] && (
-                <AssignmentTable project={p} analysts={analysts} />
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
@@ -1161,7 +1296,13 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         <SlackSuggestionsBanner
           suggestions={slackSuggestions}
           projects={projects}
+          analysts={analysts}
           onApply={applySlackSuggestion}
+          onDismiss={s => setSlackSuggestions(prev => {
+            const next = prev.filter(x => x !== s)
+            if (next.length === 0) fetch('/api/projects/suggestions', { method: 'DELETE' }).catch(() => {})
+            return next
+          })}
           onDismissAll={dismissAllSuggestions}
         />
       )}
