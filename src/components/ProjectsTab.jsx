@@ -1,6 +1,194 @@
 'use client'
 import { useState, useCallback, useRef, useEffect } from 'react'
 
+// ── Project Chat Panel ────────────────────────────────────────────────────────
+function ProjectChatPanel({ onClose, onProjectsChanged }) {
+  const WELCOME = "Hi! I can help you manage your projects conversationally. Try:\n• \"Add a new Google project called X, deadline June 15\"\n• \"Mark the Agent Debate project as In Review\"\n• \"Add a milestone to X: draft done by May 20\"\n• \"Log an update on Y: data collection complete\""
+  const [display, setDisplay] = useState([{ role: 'assistant', content: WELCOME }])
+  const [input, setInput]     = useState('')
+  const [loading, setLoading] = useState(false)
+  const apiHistory = useRef([])
+  const bottomRef  = useRef(null)
+  const inputRef   = useRef(null)
+
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [display])
+  useEffect(() => { inputRef.current?.focus() }, [])
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading) return
+    const userMsg = { role: 'user', content: text }
+    const newHistory = [...apiHistory.current, userMsg]
+    apiHistory.current = newHistory
+    setDisplay(prev => [...prev, userMsg])
+    setInput('')
+    setLoading(true)
+    try {
+      const res  = await fetch('/api/projects/chat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: newHistory }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      const assistantMsg = { role: 'assistant', content: data.message }
+      apiHistory.current = [...newHistory, assistantMsg]
+      setDisplay(prev => [...prev, assistantMsg])
+      if (data.actionsCount > 0) onProjectsChanged()
+    } catch (e) {
+      setDisplay(prev => [...prev, { role: 'assistant', content: `Something went wrong: ${e.message}` }])
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div style={{
+      position: 'fixed', top: 0, right: 0, bottom: 0, width: 380,
+      background: 'var(--bg-primary)', borderLeft: '1px solid var(--border-light)',
+      display: 'flex', flexDirection: 'column', zIndex: 1050,
+      boxShadow: '-6px 0 32px rgba(0,0,0,0.13)',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '14px 16px', borderBottom: '0.5px solid var(--border-light)',
+        display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
+      }}>
+        <span style={{ fontSize: 20 }}>💬</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>Project Assistant</div>
+          <div style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Chat to create or update projects</div>
+        </div>
+        <button onClick={onClose} style={{
+          background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 18, color: 'var(--text-tertiary)', padding: '4px 8px', lineHeight: 1,
+        }}>✕</button>
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {display.map((m, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+            <div style={{
+              maxWidth: '88%',
+              padding: '9px 12px',
+              borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
+              background: m.role === 'user' ? 'var(--accent-blue, #3b82f6)' : 'var(--bg-secondary, #f5f5f5)',
+              color: m.role === 'user' ? '#fff' : 'var(--text-primary)',
+              fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap',
+              border: m.role === 'assistant' ? '0.5px solid var(--border-light)' : 'none',
+            }}>{m.content}</div>
+          </div>
+        ))}
+        {loading && (
+          <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+            <div style={{
+              padding: '9px 14px', borderRadius: '4px 14px 14px 14px',
+              background: 'var(--bg-secondary)', border: '0.5px solid var(--border-light)',
+              color: 'var(--text-tertiary)', fontSize: 13,
+            }}>Thinking…</div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{
+        padding: '12px 14px', borderTop: '0.5px solid var(--border-light)',
+        display: 'flex', gap: 8, flexShrink: 0,
+      }}>
+        <textarea
+          ref={inputRef}
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send() } }}
+          placeholder="Add a project, update status, add a milestone…"
+          rows={2}
+          disabled={loading}
+          style={{
+            flex: 1, resize: 'none', padding: '8px 10px', fontSize: 13,
+            border: '0.5px solid var(--border-light)', borderRadius: 8,
+            lineHeight: 1.4, fontFamily: 'inherit', background: 'var(--bg-secondary)',
+          }}
+        />
+        <button onClick={send} disabled={loading || !input.trim()} style={{
+          padding: '8px 14px', borderRadius: 8, border: 'none',
+          background: 'var(--accent-blue, #3b82f6)', color: '#fff',
+          fontWeight: 600, fontSize: 13, alignSelf: 'flex-end',
+          cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+          opacity: loading || !input.trim() ? 0.5 : 1,
+        }}>Send</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Slack Suggestions Banner ──────────────────────────────────────────────────
+function SlackSuggestionsBanner({ suggestions, projects, onApply, onDismissAll }) {
+  const [applying, setApplying] = useState(null)
+
+  async function apply(s) {
+    setApplying(s)
+    await onApply(s)
+    setApplying(null)
+  }
+
+  const TYPE_LABEL = { update: '📝 Update', status: '🔄 Status change', milestone: '🏁 Milestone', new: '✨ New project' }
+  const CONF_COLOR = c => c >= 0.85 ? '#16a34a' : c >= 0.7 ? '#ca8a04' : 'var(--text-tertiary)'
+
+  return (
+    <div style={{
+      background: 'var(--bg-card)', border: '1px solid #3b82f6', borderRadius: 'var(--radius)',
+      padding: '12px 14px', marginBottom: 16,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+        <span style={{ fontSize: 15 }}>🔔</span>
+        <span style={{ fontWeight: 600, fontSize: 14 }}>Slack suggestions</span>
+        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+          {suggestions.length} item{suggestions.length !== 1 ? 's' : ''} from today
+        </span>
+        <button onClick={onDismissAll} style={{
+          marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer',
+          fontSize: 12, color: 'var(--text-tertiary)',
+        }}>Dismiss all ✕</button>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {suggestions.map((s, i) => {
+          const matched = projects.find(p => p.id === s.projectId)
+          return (
+            <div key={i} style={{
+              display: 'grid', gridTemplateColumns: '1fr auto',
+              gap: '4px 10px', alignItems: 'center',
+              padding: '8px 10px', borderRadius: 6,
+              background: 'var(--bg-secondary)',
+              border: '0.5px solid var(--border-light)',
+            }}>
+              <div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
+                  <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{TYPE_LABEL[s.type] || s.type}</span>
+                  <span style={{ fontSize: 11, fontWeight: 600 }}>{matched?.name || s.projectName}</span>
+                  <span style={{ fontSize: 10, color: CONF_COLOR(s.confidence) }}>
+                    {Math.round(s.confidence * 100)}% confident
+                  </span>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{s.content}</div>
+              </div>
+              <button
+                onClick={() => apply(s)}
+                disabled={applying === s}
+                style={{
+                  padding: '5px 10px', borderRadius: 6, border: 'none',
+                  background: 'var(--accent-blue, #3b82f6)', color: '#fff',
+                  fontSize: 12, fontWeight: 600, cursor: applying === s ? 'not-allowed' : 'pointer',
+                  opacity: applying === s ? 0.6 : 1, whiteSpace: 'nowrap',
+                }}
+              >{applying === s ? '…' : 'Apply'}</button>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red', hold: 'badge-gray' }
 const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked', hold: 'On Hold' }
 const STATUS_ICONS   = { active: '🟢', review: '🔵', blocked: '🔴', hold: '⏸️', done: '✅' }
@@ -845,11 +1033,29 @@ function StatusSection({ status, projects, expanded, setExpanded, onEdit, confir
 
 // ── Main tab ───────────────────────────────────────────────────────────────────
 export default function ProjectsTab({ projects, setProjects, analysts, loading, showToast }) {
-  const [showForm,        setShowForm]        = useState(false)
-  const [editing,         setEditing]         = useState(null)
-  const [confirmDelete,   setConfirmDelete]   = useState(null)
-  const [expanded,        setExpanded]        = useState({})
+  const [showForm,         setShowForm]         = useState(false)
+  const [editing,          setEditing]          = useState(null)
+  const [confirmDelete,    setConfirmDelete]     = useState(null)
+  const [expanded,         setExpanded]         = useState({})
   const [sectionCollapsed, setSectionCollapsed] = useState({ done: true, hold: false })
+  const [showChat,         setShowChat]         = useState(false)
+  const [slackSuggestions, setSlackSuggestions] = useState([])
+
+  // Load Slack suggestions on mount
+  useEffect(() => {
+    fetch('/api/projects/suggestions')
+      .then(r => r.json())
+      .then(d => { if (d.items?.length) setSlackSuggestions(d.items) })
+      .catch(() => {})
+  }, [])
+
+  // Re-fetch all projects (called after chat actions)
+  const refreshProjects = useCallback(async () => {
+    try {
+      const res = await fetch('/api/projects')
+      if (res.ok) setProjects(await res.json())
+    } catch {}
+  }, [setProjects])
 
   // Called when milestones change on a project
   const handleProjectUpdate = useCallback((projectId, patch) => {
@@ -900,14 +1106,65 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
     } catch (e) { showToast(e.message) }
   }
 
+  async function applySlackSuggestion(s) {
+    try {
+      if (s.type === 'update' || s.type === 'milestone') {
+        if (!s.projectId) return
+        await fetch(`/api/projects/${s.projectId}/notes`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: `[Slack] ${s.content}` }),
+        })
+        setSlackSuggestions(prev => prev.filter(x => x !== s))
+        await refreshProjects()
+        showToast('Update applied')
+      } else if (s.type === 'status' && s.projectId && s.suggestedStatus) {
+        await fetch(`/api/projects/${s.projectId}`, {
+          method: 'PUT', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: s.suggestedStatus }),
+        })
+        setSlackSuggestions(prev => prev.filter(x => x !== s))
+        await refreshProjects()
+        showToast(`Status updated to ${s.suggestedStatus}`)
+      } else if (s.type === 'new') {
+        // Open the form — user can review before creating
+        setShowForm(true)
+        setSlackSuggestions(prev => prev.filter(x => x !== s))
+        showToast('Fill in the new project details below')
+      } else {
+        setSlackSuggestions(prev => prev.filter(x => x !== s))
+      }
+    } catch (e) { showToast(e.message) }
+  }
+
+  async function dismissAllSuggestions() {
+    setSlackSuggestions([])
+    await fetch('/api/projects/suggestions', { method: 'DELETE' }).catch(() => {})
+  }
+
   if (loading) return <div className="empty-state">Loading…</div>
 
   return (
     <div>
       <div className="tab-header">
         <div className="tab-title">Projects</div>
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Add project</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn" onClick={() => setShowChat(c => !c)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            💬 Chat
+          </button>
+          <button className="btn btn-primary" onClick={() => setShowForm(true)}>+ Add project</button>
+        </div>
       </div>
+
+      {/* Slack suggestions banner */}
+      {slackSuggestions.length > 0 && (
+        <SlackSuggestionsBanner
+          suggestions={slackSuggestions}
+          projects={projects}
+          onApply={applySlackSuggestion}
+          onDismissAll={dismissAllSuggestions}
+        />
+      )}
 
       {showForm && (
         <div className="card" style={{ marginBottom: '1rem' }}>
@@ -978,6 +1235,14 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
           analysts={analysts}
           onSave={handleUpdate}
           onClose={() => setEditing(null)}
+        />
+      )}
+
+      {/* Chat panel */}
+      {showChat && (
+        <ProjectChatPanel
+          onClose={() => setShowChat(false)}
+          onProjectsChanged={refreshProjects}
         />
       )}
     </div>
