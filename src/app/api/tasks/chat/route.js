@@ -13,8 +13,8 @@ function getTomorrowStr() {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-function resolveDate(forDate) {
-  if (!forDate || forDate === 'today') return getTodayStr()
+function resolveDate(forDate, viewingDate) {
+  if (!forDate || forDate === 'today') return viewingDate || getTodayStr()
   if (forDate === 'tomorrow') return getTomorrowStr()
   return forDate
 }
@@ -32,6 +32,8 @@ export async function POST(req) {
 
     const today = getTodayStr()
     const tomorrow = getTomorrowStr()
+    // The date the user is currently viewing in the UI (may differ from today)
+    const viewingDate = (forDate && forDate !== 'today' && forDate !== 'tomorrow') ? forDate : today
 
     const taskBoard = (currentTasks || []).map(t =>
       `- ${t.analystName || t.analystId} | ${t.task} | status: ${t.status} | date: ${t.forDate}`
@@ -39,9 +41,9 @@ export async function POST(req) {
 
     const analystList = allAnalysts.map(a => `${a.name} (id: ${a.id})`).join(', ')
 
-    const systemPrompt = `You are a task board assistant for a team lead managing analysts. Parse the user's message and return structured task updates as JSON. Be precise with analyst name matching (case-insensitive, partial match ok). Today is ${today}, tomorrow is ${tomorrow}.`
+    const systemPrompt = `You are a task board assistant for a team lead managing analysts. Parse the user's message and return structured task updates as JSON. Be precise with analyst name matching (case-insensitive, partial match ok). Today's actual date is ${today}, tomorrow is ${tomorrow}. The user is currently viewing the task board for ${viewingDate}.`
 
-    const userMsg = `Current task board:\n${taskBoard}\n\nAll analysts: ${analystList}\n\nUser message: "${message}"\n\nReturn JSON with this exact structure:\n{\n  "updates": [\n    { "analystId": "...", "analystName": "...", "action": "set_task|mark_done|mark_blocked|mark_active|remove", "task": "...", "forDate": "today|tomorrow|YYYY-MM-DD" }\n  ],\n  "reply": "Brief confirmation like 'Updated: Celine → Q2 eval, Jade marked done'"\n}\n\nRules:\n- action "set_task" creates or replaces the task for that analyst on that date\n- action "mark_done/mark_blocked/mark_active" updates status of existing task\n- action "remove" deletes the task\n- forDate defaults to "today" unless message specifies tomorrow or a date\n- Match analyst names case-insensitively, partial match ok (e.g. "Jade" matches "Jade Smith")\n- Only return updates that are clearly requested`
+    const userMsg = `Current task board (showing ${viewingDate}):\n${taskBoard}\n\nAll analysts: ${analystList}\n\nUser message: "${message}"\n\nReturn JSON with this exact structure:\n{\n  "updates": [\n    { "analystId": "...", "analystName": "...", "action": "set_task|mark_done|mark_blocked|mark_active|remove", "task": "...", "forDate": "today|tomorrow|YYYY-MM-DD" }\n  ],\n  "reply": "Brief confirmation like 'Updated: Celine → Q2 eval, Jade marked done'"\n}\n\nRules:\n- action "set_task" creates or replaces the task for that analyst on that date\n- action "mark_done/mark_blocked/mark_active" updates status of existing task\n- action "remove" deletes the task\n- forDate defaults to "today" (which resolves to ${viewingDate}, the date currently shown in the UI)\n- Use "tomorrow" only if the message explicitly says tomorrow\n- Match analyst names case-insensitively, partial match ok (e.g. "Jade" matches "Jade Smith")\n- Only return updates that are clearly requested`
 
     const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const response = await anthropic.messages.create({
@@ -63,7 +65,7 @@ export async function POST(req) {
 
     // Apply updates to DB
     for (const update of updates) {
-      const dateStr = resolveDate(update.forDate)
+      const dateStr = resolveDate(update.forDate, viewingDate)
       const analystId = update.analystId
 
       if (update.action === 'set_task') {
