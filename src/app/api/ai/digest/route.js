@@ -166,7 +166,8 @@ Extract updates in this exact JSON format. Return ONLY valid JSON, no markdown f
     { "id": "project_id_from_context_or_null", "name": "project name", "status": "active|review|done|blocked|null", "note": "what was said, noting any status changes or connection to prior project comments" }
   ],
   "flags": [{ "text": "urgent fact-based statement", "analystId": "analyst_id_from_context_if_mentioned_or_null" }],
-  "todos": ["direct action items written as commands, e.g. 'Follow up with Jade on X' not 'Make sure Avi does X'. Never mention the manager by name. Do not duplicate items already in the open action items list."]
+  "todos": ["direct action items written as commands, e.g. 'Follow up with Jade on X' not 'Make sure Avi does X'. Never mention the manager by name. Do not duplicate items already in the open action items list."],
+  "reminders": ["ongoing habit, norm, or coaching note that should be kept in mind across multiple days — NOT a one-off task. E.g. 'Set explicit deadlines when assigning tasks to Shira', 'Enforce English-only in team dailies'. Max 2."]
 }
 
 Rules:
@@ -177,6 +178,7 @@ Rules:
 - flags: always try to match the analyst mentioned by name and include their id from the context. If no specific analyst is mentioned, use null.
 - todos: write as direct imperatives ("Follow up with...", "Schedule...", "Review...") — never "Avi should..." or "Make sure Avi..."
 - todos: check the open action items list — do not create duplicates of items already tracked
+- reminders: only use for recurring patterns or explicit team norms, not one-time tasks. These will appear in every daily brief until dismissed. Return [] if nothing qualifies.
 - If this is a recurring 1:1, reference what's changed since the last meeting with this person
 - If nothing found for a category return an empty array`
 

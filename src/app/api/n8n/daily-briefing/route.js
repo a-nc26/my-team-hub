@@ -71,6 +71,14 @@ export async function GET() {
     const firstName   = managerName.split(' ')[0]
     const today       = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
+    // Standing reminders — persistent coaching notes to weave into the brief
+    const standingReminders = (() => {
+      try {
+        const row = settings.find(s => s.key === 'standing_reminders')
+        return row ? JSON.parse(row.value) : []
+      } catch { return [] }
+    })()
+
     // Build context for Claude
     const teamContext = analysts.map(a => {
       const lastNote = a.notes[0]
@@ -130,6 +138,7 @@ ${projectContext || 'No active projects.'}
 OPEN TO-DOS (${todos.length} total, ${todos.filter(t => t.priority === 'high').length} high priority):
 ${todoContext || 'None.'}
 ${recentlyDoneContext ? `\nCOMPLETED IN THE LAST 24H (for context — do not re-flag these):\n${recentlyDoneContext}` : ''}
+${standingReminders.length > 0 ? `\nSTANDING REMINDERS (recurring habits/norms — weave in naturally where relevant, don't list them robotically):\n${standingReminders.map(r => `- ${r.text}`).join('\n')}` : ''}
 
 Write a morning briefing with three short sections:
 1. Team pulse — who needs attention today, noting any changes since recent briefings

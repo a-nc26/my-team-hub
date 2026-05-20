@@ -166,7 +166,26 @@ export default function TodayTab({ analysts, showToast, calendarUrl, onOpenSetti
   const [loadingCal,   setLoadingCal]     = useState(false)
   const [addingFor,    setAddingFor]      = useState(null)
   const [addText,      setAddText]        = useState('')
+  const [reminders,    setReminders]      = useState([])
   const chatBottomRef                     = useRef(null)
+
+  // Fetch standing reminders once on mount
+  useEffect(() => {
+    fetch('/api/reminders')
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setReminders(data) })
+      .catch(() => {})
+  }, [])
+
+  async function handleDismissReminder(id) {
+    try {
+      await fetch('/api/reminders', {
+        method: 'DELETE', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      setReminders(prev => prev.filter(r => r.id !== id))
+    } catch (e) { showToast('Failed to dismiss reminder') }
+  }
 
   // Fetch tasks for selected date
   const fetchTasks = useCallback(async (date) => {
@@ -351,6 +370,32 @@ export default function TodayTab({ analysts, showToast, calendarUrl, onOpenSetti
       <div className="tab-header" style={{ marginBottom: '0.75rem' }}>
         <div className="tab-title">{fmtSelected}{isToday ? ' · Today' : ''}</div>
       </div>
+
+      {/* ── Standing reminders ── */}
+      {reminders.length > 0 && (
+        <div className="card" style={{ marginBottom: '1rem', padding: '10px 14px', background: 'var(--bg-tertiary)', border: '1px solid var(--border-light)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', letterSpacing: '.03em', textTransform: 'uppercase' }}>📌 Standing reminders</span>
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)' }}>· in every brief · dismiss when done</span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {reminders.map(r => (
+              <div key={r.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.4 }}>{r.text}</div>
+                <button
+                  onClick={() => handleDismissReminder(r.id)}
+                  title="Dismiss"
+                  style={{
+                    flexShrink: 0, background: 'none', border: 'none', cursor: 'pointer',
+                    color: 'var(--text-tertiary)', fontSize: 13, opacity: 0.5, padding: '0 2px',
+                    lineHeight: 1, marginTop: 1,
+                  }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Calendar section ── */}
       <div className="card" style={{ marginBottom: '1rem' }}>
