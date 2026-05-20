@@ -122,12 +122,18 @@ export async function GET() {
         role: 'user',
         content: `You are writing a morning briefing for ${managerName}, a team lead. Today is ${today}.
 Write directly to them using "you". Be concise and direct — this is a quick morning read, not a report.
-3-4 sentences max per section. Flag anything urgent. Use plain prose, no bullet lists in the output.
+Use plain prose, no bullet lists in the output.
 
-${historyContext ? `RECENT PAST BRIEFINGS (last ${pastBriefings.length} days — read these carefully):
+THIS IS CRITICAL — THE BRIEF IS ABOUT CHANGE, NOT STATUS:
+- You have the last ${pastBriefings.length} briefings below. Your job is to surface ONLY what is NEW or DIFFERENT since the last briefing.
+- If a person's mood/status hasn't changed and there's no new note → do NOT mention them.
+- If a project has no new update since it was last mentioned → do NOT mention it.
+- If a to-do has been sitting there for days with no change → do NOT list it again.
+- A section with nothing new should be omitted entirely or replaced with one short "nothing new here" line — never padded with repeated info.
+- The reader already knows the steady state. Only tell them what changed.
+
+${historyContext ? `RECENT PAST BRIEFINGS (read carefully — do not repeat anything already said unless the situation has materially changed):
 ${historyContext}
-
-IMPORTANT: Do NOT repeat points already covered in recent briefings unless the situation has materially changed or become more urgent. If something is resolved or no longer relevant, do not mention it. Prioritise NEW developments and what has actually changed since the last briefing.
 
 ` : ''}TEAM STATE (today):
 ${teamContext || 'No active analysts.'}
@@ -137,15 +143,15 @@ ${projectContext || 'No active projects.'}
 
 OPEN TO-DOS (${todos.length} total, ${todos.filter(t => t.priority === 'high').length} high priority):
 ${todoContext || 'None.'}
-${recentlyDoneContext ? `\nCOMPLETED IN THE LAST 24H (for context — do not re-flag these):\n${recentlyDoneContext}` : ''}
-${standingReminders.length > 0 ? `\nSTANDING REMINDERS (recurring habits/norms — weave in naturally where relevant, don't list them robotically):\n${standingReminders.map(r => `- ${r.text}`).join('\n')}` : ''}
+${recentlyDoneContext ? `\nCOMPLETED IN THE LAST 24H:\n${recentlyDoneContext}` : ''}
+${standingReminders.length > 0 ? `\nSTANDING REMINDERS (weave in naturally only if relevant today — never list them verbatim):\n${standingReminders.map(r => `- ${r.text}`).join('\n')}` : ''}
 
-Write a morning briefing with three short sections:
-1. Team pulse — who needs attention today, noting any changes since recent briefings
-2. Projects — what to keep an eye on, anything due soon or newly flagged
-3. Focus — the 2-3 most important things to do today based on the todos and context
+Write a morning briefing. Omit any section where there is genuinely nothing new to say.
+1. Team pulse — only people whose situation has changed or who need specific attention today
+2. Projects — only projects with new developments, blockers, or approaching deadlines
+3. Focus — the 1-2 most important things to act on today (skip if nothing urgent)
 
-Keep the whole thing under 150 words. Warm but direct tone.`,
+Keep the whole thing under 120 words. If it's a quiet day with no changes, say so in one sentence — don't invent things to fill space. Warm but direct tone.`,
       }],
     })
 
