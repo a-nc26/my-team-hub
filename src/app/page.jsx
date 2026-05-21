@@ -79,7 +79,7 @@ export default function Home() {
         {activeTab === 'today'    && <TodayTab analysts={analysts} showToast={showToast} calendarUrl={settings.calendarUrl} onOpenSettings={() => setShowSettings(true)} />}
         {activeTab === 'team'     && <TeamTab analysts={analysts} setAnalysts={setAnalysts} meetings={meetings} todos={todos} setTodos={setTodos} loading={loading} showToast={showToast} />}
         {activeTab === 'projects' && <ProjectsTab projects={projects} setProjects={setProjects} analysts={analysts} loading={loading} showToast={showToast} />}
-        {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}
+        {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} projects={projects} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}
         {activeTab === 'todos'    && <TodosTab todos={todos} setTodos={setTodos} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'tools'    && <ToolsTab tools={tools} setTools={setTools} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'ai'       && <AICoach analysts={analysts} projects={projects} meetings={meetings} todos={todos} settings={settings} showToast={showToast} />}

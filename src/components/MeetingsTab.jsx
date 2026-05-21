@@ -8,7 +8,7 @@ function fmt(date) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalysts, setProjects, setTodos, loading, showToast }) {
+export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalysts, projects, setProjects, setTodos, loading, showToast }) {
   const [showModal, setShowModal] = useState(false)
   const [digestData, setDigestData] = useState(null) // { digest, title, meetingId }
   const [expanded, setExpanded] = useState({})
@@ -165,7 +165,7 @@ export default function MeetingsTab({ meetings, setMeetings, analysts, setAnalys
         <MeetingModal analysts={analysts} onSave={handleSave} onClose={() => setShowModal(false)} showToast={showToast} />
       )}
       {digestData && (
-        <DigestModal digest={digestData.digest} meetingTitle={digestData.title} analysts={analysts} projects={[]}
+        <DigestModal digest={digestData.digest} meetingTitle={digestData.title} analysts={analysts} projects={projects || []}
           onApply={handleApplyDigest} onClose={() => setDigestData(null)} />
       )}
     </div>
