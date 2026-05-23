@@ -22,7 +22,7 @@ export async function GET() {
       prisma.project.findMany({
         include: {
           projectNotes: { orderBy: { createdAt: 'desc' }, take: 1 },
-          assignments:  { include: { analyst: true } },
+          analysts:     { include: { analyst: true } },
         },
         orderBy: { updatedAt: 'desc' },
       }),
@@ -119,7 +119,7 @@ export async function GET() {
       lastNote:     p.projectNotes[0]?.text || null,
       lastNoteDate: p.projectNotes[0]?.createdAt || null,
       daysSinceActivity: daysSince(projectLastActivity[p.id] || p.updatedAt),
-      analysts:     p.assignments.map(a => ({ id: a.analyst.id, name: a.analyst.name, initials: a.analyst.initials, color: a.analyst.color })),
+      analysts:     (p.analysts || []).map(a => ({ id: a.analyst.id, name: a.analyst.name, initials: a.analyst.initials, color: a.analyst.color })),
     }))
 
     // Stats
