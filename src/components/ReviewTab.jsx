@@ -43,8 +43,9 @@ export default function ReviewTab({ analysts, projects, settings, showToast }) {
       .then(data => {
         if (Array.isArray(data)) {
           setReviews(data)
-          if (data.length > 0) setActiveWeek(data[0].value.weekStart)
-          else setActiveWeek(weeks[1]) // default to last week
+          const lastWeek = getWeekMonday(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+          if (data.length > 0) setActiveWeek(data[0].value?.weekStart || lastWeek)
+          else setActiveWeek(lastWeek)
         }
         setLoading(false)
       })

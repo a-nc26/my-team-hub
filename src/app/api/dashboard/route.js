@@ -63,26 +63,24 @@ export async function GET() {
       moodHistory[analyst.id] = days
     }
 
-    // Days since last note per analyst
-    const lastNoteDate = {}
+    // Days since last note per analyst — use all notes (not just recent)
+    const allRecentNotesByAnalyst = {}
     for (const note of recentNotes) {
-      if (!lastNoteDate[note.analystId] || note.createdAt > lastNoteDate[note.analystId]) {
-        lastNoteDate[note.analystId] = note.createdAt
+      if (!allRecentNotesByAnalyst[note.analystId] || note.createdAt > allRecentNotesByAnalyst[note.analystId]) {
+        allRecentNotesByAnalyst[note.analystId] = note.createdAt
       }
     }
-    // Also check older notes for analysts with no recent notes
-    const olderNotes = await prisma.note.findMany({
-      where: {
-        analystId: { in: analysts.map(a => a.id) },
-        createdAt: { lt: fourteenDaysAgo },
-      },
-      orderBy: { createdAt: 'desc' },
-      distinct: ['analystId'],
-      select: { analystId: true, createdAt: true },
-    })
-    for (const note of olderNotes) {
-      if (!lastNoteDate[note.analystId]) {
-        lastNoteDate[note.analystId] = note.createdAt
+    // For analysts with no recent notes, look further back
+    const analystsMissingNotes = analysts.filter(a => !allRecentNotesByAnalyst[a.id]).map(a => a.id)
+    const lastNoteDate = { ...allRecentNotesByAnalyst }
+    if (analystsMissingNotes.length > 0) {
+      for (const analystId of analystsMissingNotes) {
+        const oldNote = await prisma.note.findFirst({
+          where: { analystId, createdAt: { lt: fourteenDaysAgo } },
+          orderBy: { createdAt: 'desc' },
+          select: { createdAt: true },
+        })
+        if (oldNote) lastNoteDate[analystId] = oldNote.createdAt
       }
     }
 

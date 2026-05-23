@@ -165,7 +165,11 @@ export default function DashboardTab({ settings, onNavigate, analysts: propAnaly
     </div>
   )
 
-  if (!data) return null
+  if (!data || data.error || !data.stats) return (
+    <div style={{ padding: '2rem', color: 'var(--text-secondary)', fontSize: 14 }}>
+      {data?.error ? `Error loading dashboard: ${data.error}` : 'Loading…'}
+    </div>
+  )
 
   const { stats, atRiskProjects, highTodos } = data
   const sortedAnalysts = [...(data.analysts || [])].sort((a, b) => {
