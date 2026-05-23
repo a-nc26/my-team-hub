@@ -15,7 +15,7 @@ export async function GET() {
       prisma.analyst.findMany({
         where: { pending: false },
         include: {
-          assignments: { include: { project: true } },
+          projects: { include: { project: true } },
         },
         orderBy: { name: 'asc' },
       }),
@@ -107,7 +107,7 @@ export async function GET() {
       mood:          a.mood,
       moodHistory:   moodHistory[a.id] || [],
       daysSinceNote: daysSince(lastNoteDate[a.id]),
-      currentProject: a.assignments[0]?.project?.name || null,
+      currentProject: a.projects[0]?.project?.name || null,
     }))
 
     // Enrich projects
