@@ -1,13 +1,15 @@
 'use client'
 export default function Nav({ activeTab, setActiveTab, hasAttention, settings, onOpenSettings }) {
   const tabs = [
-    { id: 'today', label: "Today's Board" },
-    { id: 'team', label: 'Team' },
+    { id: 'home',     label: 'Home' },
+    { id: 'today',    label: "Today's Board" },
+    { id: 'team',     label: 'Team' },
     { id: 'projects', label: 'Projects' },
     { id: 'meetings', label: 'Meetings' },
-    { id: 'todos', label: 'My To-Dos' },
-    { id: 'tools', label: 'Tools' },
-    { id: 'ai', label: 'AI Coach' },
+    { id: 'todos',    label: 'My To-Dos' },
+    { id: 'review',   label: 'Review' },
+    { id: 'tools',    label: 'Tools' },
+    { id: 'ai',       label: 'AI Coach' },
   ]
   const name = settings?.managerName || ''
   const title = settings?.managerTitle || ''

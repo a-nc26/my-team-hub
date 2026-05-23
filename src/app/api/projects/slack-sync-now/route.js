@@ -20,6 +20,13 @@ export async function POST() {
   }
 
   try {
+    // Auto-join the channel if the bot isn't in it yet (works for public channels)
+    await fetch(`https://slack.com/api/conversations.join`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channel: CHANNEL_ID }),
+    })
+
     // Fetch last 40 messages from #team-gts
     const slackRes = await fetch(
       `https://slack.com/api/conversations.history?channel=${CHANNEL_ID}&limit=40`,

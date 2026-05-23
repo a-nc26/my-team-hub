@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import Nav from '@/components/Nav'
+import DashboardTab from '@/components/DashboardTab'
 import TeamTab from '@/components/TeamTab'
 import ProjectsTab from '@/components/ProjectsTab'
 import MeetingsTab from '@/components/MeetingsTab'
@@ -9,9 +10,10 @@ import AICoach from '@/components/AICoach'
 import ToolsTab from '@/components/ToolsTab'
 import SettingsModal from '@/components/SettingsModal'
 import TodayTab from '@/components/TodayTab'
+import ReviewTab from '@/components/ReviewTab'
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState('team')
+  const [activeTab, setActiveTab] = useState('home')
   const [analysts, setAnalysts] = useState([])
   const [projects, setProjects] = useState([])
   const [meetings, setMeetings] = useState([])
@@ -76,11 +78,13 @@ export default function Home() {
             <button className="btn btn-sm" onClick={fetchAll}>Retry</button>
           </div>
         )}
+        {activeTab === 'home'     && <DashboardTab settings={settings} analysts={analysts} onNavigate={setActiveTab} showToast={showToast} />}
         {activeTab === 'today'    && <TodayTab analysts={analysts} showToast={showToast} calendarUrl={settings.calendarUrl} onOpenSettings={() => setShowSettings(true)} />}
         {activeTab === 'team'     && <TeamTab analysts={analysts} setAnalysts={setAnalysts} meetings={meetings} todos={todos} setTodos={setTodos} projects={projects} setProjects={setProjects} loading={loading} showToast={showToast} />}
         {activeTab === 'projects' && <ProjectsTab projects={projects} setProjects={setProjects} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'meetings' && <MeetingsTab meetings={meetings} setMeetings={setMeetings} analysts={analysts} setAnalysts={setAnalysts} projects={projects} setProjects={setProjects} setTodos={setTodos} loading={loading} showToast={showToast} />}
         {activeTab === 'todos'    && <TodosTab todos={todos} setTodos={setTodos} analysts={analysts} loading={loading} showToast={showToast} />}
+        {activeTab === 'review'   && <ReviewTab analysts={analysts} projects={projects} settings={settings} showToast={showToast} />}
         {activeTab === 'tools'    && <ToolsTab tools={tools} setTools={setTools} analysts={analysts} loading={loading} showToast={showToast} />}
         {activeTab === 'ai'       && <AICoach analysts={analysts} projects={projects} meetings={meetings} todos={todos} settings={settings} showToast={showToast} />}
       </main>
