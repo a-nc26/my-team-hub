@@ -19,6 +19,10 @@ const STATUS_CONFIG = {
 }
 const ANALYST_COLORS = ['#e03131','#2f9e44','#1971c2','#e8590c','#7048e8','#0c8599','#c2255c','#5c940d','#862e9c','#0b7285']
 
+// ── Board layout ───────────────────────────────────────────────────────────────
+// col: chevron | name | type | people | due | milestones | last update | actions
+const GRID = '32px minmax(180px,2fr) 88px 100px 108px 100px minmax(120px,1fr) 76px'
+
 // ── Project Chat Panel ────────────────────────────────────────────────────────
 function ProjectChatPanel({ onClose, onProjectsChanged }) {
   const WELCOME = "Hi! I can help you manage your projects conversationally. Try:\n• \"Add a new Google project called X, deadline June 15\"\n• \"Mark the Agent Debate project as In Review\"\n• \"Add a milestone to X: draft done by May 20\"\n• \"Log an update on Y: data collection complete\""
@@ -65,7 +69,6 @@ function ProjectChatPanel({ onClose, onProjectsChanged }) {
       display: 'flex', flexDirection: 'column', zIndex: 1050,
       boxShadow: '-6px 0 32px rgba(0,0,0,0.13)',
     }}>
-      {/* Header */}
       <div style={{
         padding: '14px 16px', borderBottom: '0.5px solid var(--border-light)',
         display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0,
@@ -80,14 +83,11 @@ function ProjectChatPanel({ onClose, onProjectsChanged }) {
           fontSize: 18, color: 'var(--text-tertiary)', padding: '4px 8px', lineHeight: 1,
         }}>✕</button>
       </div>
-
-      {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {display.map((m, i) => (
           <div key={i} style={{ display: 'flex', justifyContent: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
             <div style={{
-              maxWidth: '88%',
-              padding: '9px 12px',
+              maxWidth: '88%', padding: '9px 12px',
               borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '4px 14px 14px 14px',
               background: m.role === 'user' ? 'var(--accent-blue, #3b82f6)' : 'var(--bg-secondary, #f5f5f5)',
               color: m.role === 'user' ? '#fff' : 'var(--text-primary)',
@@ -107,8 +107,6 @@ function ProjectChatPanel({ onClose, onProjectsChanged }) {
         )}
         <div ref={bottomRef} />
       </div>
-
-      {/* Input */}
       <div style={{
         padding: '12px 14px', borderTop: '0.5px solid var(--border-light)',
         display: 'flex', gap: 8, flexShrink: 0,
@@ -173,11 +171,9 @@ function SlackSuggestionsBanner({ suggestions, projects, analysts, onApply, onDi
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {suggestions.map((s, i) => {
           const matched = projects.find(p => p.id === s.projectId)
-          const matchedAnalyst = analysts?.find(a => a.name?.toLowerCase().includes(s.analystName?.toLowerCase() || '___'))
           const isAnalyst = s.relatedTo === 'analyst'
           const accentColor = isAnalyst ? '#059669' : '#2563eb'
           const confPct = Math.round((s.confidence || 0) * 100)
-
           return (
             <div key={i} style={{
               display: 'grid', gridTemplateColumns: '1fr auto auto',
@@ -223,9 +219,7 @@ function SlackSuggestionsBanner({ suggestions, projects, analysts, onApply, onDi
   )
 }
 
-const STATUS_BADGE   = { active: 'badge-blue', review: 'badge-purple', done: 'badge-green', blocked: 'badge-red', hold: 'badge-gray' }
 const STATUS_LABELS  = { active: 'Active', review: 'In Review', done: 'Done', blocked: 'Blocked', hold: 'On Hold' }
-const STATUS_ICONS   = { active: '🟢', review: '🔵', blocked: '🔴', hold: '⏸️', done: '✅' }
 const STATUS_ORDER   = ['active', 'review', 'blocked', 'hold', 'done']
 const DEFAULT_FIELDS = [
   { id: 'harmArea', label: 'Harm Area', type: 'text' },
@@ -241,33 +235,23 @@ function AssignmentEditor({ assignments, setAssignments, analysts, fieldDefs }) 
     if (assignedIds.has(id)) return
     setAssignments(prev => [...prev, { analystId: id, fieldValues: {} }])
   }
-
   function removeAnalyst(id) {
     setAssignments(prev => prev.filter(a => a.analystId !== id))
   }
-
   function setField(analystId, fieldId, value) {
     setAssignments(prev => prev.map(a =>
-      a.analystId === analystId
-        ? { ...a, fieldValues: { ...a.fieldValues, [fieldId]: value } }
-        : a
+      a.analystId === analystId ? { ...a, fieldValues: { ...a.fieldValues, [fieldId]: value } } : a
     ))
   }
 
   return (
     <div>
-      {/* Dropdown to add analyst */}
-      <select
-        value=""
-        onChange={e => { if (e.target.value) addAnalyst(e.target.value) }}
-        style={{ marginBottom: 10 }}
-      >
+      <select value="" onChange={e => { if (e.target.value) addAnalyst(e.target.value) }} style={{ marginBottom: 10 }}>
         <option value="">+ Add analyst to project…</option>
         {available.filter(a => !assignedIds.has(a.id)).map(a => (
           <option key={a.id} value={a.id}>{a.name}</option>
         ))}
       </select>
-
       {assignments.length > 0 && (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
@@ -283,9 +267,7 @@ function AssignmentEditor({ assignments, setAssignments, analysts, fieldDefs }) 
                 const analyst = analysts.find(x => x.id === a.analystId)
                 return (
                   <tr key={a.analystId}>
-                    <td style={tdStyle}>
-                      <span style={{ fontWeight: 500 }}>{analyst?.name || a.analystId}</span>
-                    </td>
+                    <td style={tdStyle}><span style={{ fontWeight: 500 }}>{analyst?.name || a.analystId}</span></td>
                     {fieldDefs.map(f => (
                       <td key={f.id} style={tdStyle}>
                         <input
@@ -316,47 +298,34 @@ function AssignmentEditor({ assignments, setAssignments, analysts, fieldDefs }) 
 const thStyle = { textAlign: 'left', padding: '6px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.4px', borderBottom: '0.5px solid var(--border-light)', whiteSpace: 'nowrap' }
 const tdStyle = { padding: '6px 8px', borderBottom: '0.5px solid var(--border-light)', verticalAlign: 'middle' }
 
-// ── MentionInput — input with @-mention dropdown ──────────────────────────────
+// ── MentionInput ──────────────────────────────────────────────────────────────
 function MentionInput({ value, onChange, onSubmit, analysts, placeholder }) {
   const inputRef = useRef(null)
   const [mentionQuery, setMentionQuery] = useState('')
   const [mentionStart, setMentionStart] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
-
-  const filtered = analysts.filter(a =>
-    !a.pending && a.name.toLowerCase().startsWith(mentionQuery.toLowerCase())
-  )
+  const filtered = analysts.filter(a => !a.pending && a.name.toLowerCase().startsWith(mentionQuery.toLowerCase()))
 
   function handleChange(e) {
     const val = e.target.value
     onChange(val)
-
     const cursor = e.target.selectionStart
-    // Find the last '@' before cursor
     const before = val.slice(0, cursor)
     const atIdx = before.lastIndexOf('@')
     if (atIdx !== -1 && (atIdx === 0 || /\s/.test(before[atIdx - 1]))) {
       const query = before.slice(atIdx + 1)
       if (!/\s/.test(query)) {
-        setMentionStart(atIdx)
-        setMentionQuery(query)
-        setShowDropdown(true)
-        return
+        setMentionStart(atIdx); setMentionQuery(query); setShowDropdown(true); return
       }
     }
-    setShowDropdown(false)
-    setMentionQuery('')
-    setMentionStart(null)
+    setShowDropdown(false); setMentionQuery(''); setMentionStart(null)
   }
 
   function insertMention(name) {
     const before = value.slice(0, mentionStart)
     const after = value.slice(mentionStart + 1 + mentionQuery.length)
-    const newVal = before + '@' + name + ' ' + after
-    onChange(newVal)
-    setShowDropdown(false)
-    setMentionQuery('')
-    setMentionStart(null)
+    onChange(before + '@' + name + ' ' + after)
+    setShowDropdown(false); setMentionQuery(''); setMentionStart(null)
     setTimeout(() => {
       if (inputRef.current) {
         const pos = before.length + name.length + 2
@@ -366,40 +335,25 @@ function MentionInput({ value, onChange, onSubmit, analysts, placeholder }) {
     }, 0)
   }
 
-  function handleKeyDown(e) {
-    if (e.key === 'Escape') { setShowDropdown(false); return }
-    if (e.key === 'Enter' && !e.shiftKey && !showDropdown) { onSubmit(); return }
-  }
-
   return (
     <div style={{ position: 'relative', flex: 1 }}>
-      <input
-        ref={inputRef}
-        value={value}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
+      <input ref={inputRef} value={value} onChange={handleChange}
+        onKeyDown={e => { if (e.key === 'Escape') setShowDropdown(false); if (e.key === 'Enter' && !e.shiftKey && !showDropdown) onSubmit() }}
         placeholder={placeholder}
         style={{ width: '100%', padding: '6px 10px', fontSize: 13, boxSizing: 'border-box' }}
       />
       {showDropdown && filtered.length > 0 && (
         <div style={{
           position: 'absolute', bottom: '100%', left: 0, marginBottom: 4,
-          background: 'var(--bg-primary, #fff)', border: '1px solid var(--border-light)',
+          background: 'var(--bg-primary)', border: '1px solid var(--border-light)',
           borderRadius: 'var(--radius-sm)', boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
           zIndex: 100, minWidth: 160, maxHeight: 180, overflowY: 'auto',
         }}>
           {filtered.map(a => (
-            <button
-              key={a.id}
-              onMouseDown={e => { e.preventDefault(); insertMention(a.name) }}
-              style={{
-                display: 'block', width: '100%', textAlign: 'left',
-                padding: '7px 12px', fontSize: 13, background: 'none', border: 'none',
-                cursor: 'pointer', color: 'var(--text-primary)',
-              }}
+            <button key={a.id} onMouseDown={e => { e.preventDefault(); insertMention(a.name) }}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 12px', fontSize: 13, background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-primary)' }}
               onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-tertiary)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >
+              onMouseLeave={e => e.currentTarget.style.background = 'none'}>
               @{a.name}
             </button>
           ))}
@@ -409,36 +363,31 @@ function MentionInput({ value, onChange, onSubmit, analysts, placeholder }) {
   )
 }
 
-// Render comment text with @Name highlighted in blue
 function CommentText({ text, analysts }) {
   const names = analysts.map(a => a.name)
   if (names.length === 0) return <span>{text}</span>
-
   const pattern = new RegExp(`(@(?:${names.map(n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')}))`, 'g')
   const parts = text.split(pattern)
   return (
     <span>
       {parts.map((part, i) => {
-        if (part.startsWith('@') && names.includes(part.slice(1))) {
+        if (part.startsWith('@') && names.includes(part.slice(1)))
           return <span key={i} style={{ color: 'var(--accent-blue)', fontWeight: 600 }}>{part}</span>
-        }
         return <span key={i}>{part}</span>
       })}
     </span>
   )
 }
 
-// ── Project updates (inline feed, always visible) ─────────────────────────────
+// ── Project updates ───────────────────────────────────────────────────────────
 function ProjectUpdates({ project, onNoteAdded, showToast }) {
   const [text,     setText]     = useState('')
   const [saving,   setSaving]   = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const inputRef = useRef(null)
   const notes = project.projectNotes || []
 
   function fmtDate(d) {
-    const date = new Date(d)
-    const now  = new Date()
+    const date = new Date(d), now = new Date()
     const diff = Math.floor((now - date) / 86400000)
     if (diff === 0) return 'Today'
     if (diff === 1) return 'Yesterday'
@@ -471,19 +420,15 @@ function ProjectUpdates({ project, onNoteAdded, showToast }) {
   const preview = expanded ? notes : notes.slice(0, 3)
 
   return (
-    <div style={{ marginTop: 8 }}>
+    <div>
       {notes.length > 0 && (
         <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 6 }}>
           Updates <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--text-tertiary)' }}>({notes.length})</span>
         </div>
       )}
-
-      {/* Quick add */}
       <div style={{ display: 'flex', gap: 6, marginBottom: notes.length > 0 ? 6 : 0 }}>
         <input
-          ref={inputRef}
-          value={text}
-          onChange={e => setText(e.target.value)}
+          value={text} onChange={e => setText(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && handleAdd()}
           placeholder="Log an update… (Enter to save)"
           style={{ flex: 1, padding: '5px 8px', fontSize: 12 }}
@@ -494,30 +439,18 @@ function ProjectUpdates({ project, onNoteAdded, showToast }) {
           </button>
         )}
       </div>
-
-      {/* Feed */}
       {preview.map(n => (
-        <div key={n.id} style={{
-          display: 'flex', alignItems: 'flex-start', gap: 8,
-          padding: '5px 0', borderTop: '0.5px solid var(--border-light)',
-        }}>
-          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0, paddingTop: 2, minWidth: 52, textAlign: 'right' }}>
-            {fmtDate(n.createdAt)}
-          </span>
+        <div key={n.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '5px 0', borderTop: '0.5px solid var(--border-light)' }}>
+          <span style={{ fontSize: 10, color: 'var(--text-tertiary)', flexShrink: 0, paddingTop: 2, minWidth: 52, textAlign: 'right' }}>{fmtDate(n.createdAt)}</span>
           <span style={{ flex: 1, fontSize: 12, color: 'var(--text-primary)', lineHeight: 1.5 }}>{n.text}</span>
-          <button
-            onClick={() => handleDelete(n.id)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}
-            title="Delete">✕</button>
+          <button onClick={() => handleDelete(n.id)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.4, padding: '0 2px', flexShrink: 0 }}>✕</button>
         </div>
       ))}
-
       {notes.length > 3 && (
-        <button
-          className="btn btn-ghost btn-sm"
+        <button className="btn btn-ghost btn-sm"
           style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '3px 0', marginTop: 2 }}
-          onClick={() => setExpanded(e => !e)}
-        >
+          onClick={() => setExpanded(e => !e)}>
           {expanded ? '▴ Show less' : `▾ Show all ${notes.length} updates`}
         </button>
       )}
@@ -525,89 +458,7 @@ function ProjectUpdates({ project, onNoteAdded, showToast }) {
   )
 }
 
-// ── Project comments ──────────────────────────────────────────────────────────
-function ProjectComments({ project, onNoteAdded, showToast, analysts }) {
-  const [text,    setText]    = useState('')
-  const [saving,  setSaving]  = useState(false)
-  const [deleting, setDeleting] = useState(null)
-  const notes = project.projectNotes || []
-
-  async function handleAdd() {
-    if (!text.trim()) return
-    setSaving(true)
-    try {
-      const res = await fetch(`/api/projects/${project.id}/notes`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text }),
-      })
-      if (!res.ok) throw new Error('Failed to save comment')
-      const note = await res.json()
-      onNoteAdded(project.id, note)
-      setText('')
-    } catch (e) { showToast(e.message) }
-    finally { setSaving(false) }
-  }
-
-  async function handleDelete(noteId) {
-    setDeleting(noteId)
-    try {
-      await fetch(`/api/projects/${project.id}/notes?noteId=${noteId}`, { method: 'DELETE' })
-      onNoteAdded(project.id, null, noteId)
-    } catch (e) { showToast(e.message) }
-    finally { setDeleting(null) }
-  }
-
-  function fmtTime(d) {
-    return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
-  }
-
-  return (
-    <div style={{ marginTop: 14 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)', marginBottom: 8 }}>
-        💬 Comments {notes.length > 0 && <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>({notes.length})</span>}
-      </div>
-
-      {notes.length > 0 && (
-        <div style={{ marginBottom: 10 }}>
-          {notes.map(n => (
-            <div key={n.id} style={{ display: 'flex', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border-light)', alignItems: 'flex-start' }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, color: 'var(--text-primary)', lineHeight: 1.5 }}>
-                  <CommentText text={n.text} analysts={analysts || []} />
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>{fmtTime(n.createdAt)}</div>
-              </div>
-              <button
-                onClick={() => handleDelete(n.id)}
-                disabled={deleting === n.id}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, opacity: 0.5, padding: '2px 4px', flexShrink: 0 }}
-                title="Delete comment">✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {notes.length === 0 && (
-        <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginBottom: 8 }}>No comments yet.</div>
-      )}
-
-      <div style={{ display: 'flex', gap: 6 }}>
-        <MentionInput
-          value={text}
-          onChange={setText}
-          onSubmit={handleAdd}
-          analysts={analysts || []}
-          placeholder="Add a comment or update… (type @ to mention)"
-        />
-        <button className="btn btn-primary btn-sm" onClick={handleAdd} disabled={saving || !text.trim()}>
-          {saving ? '…' : 'Add'}
-        </button>
-      </div>
-    </div>
-  )
-}
-
-// ── Project form (create / edit) ──────────────────────────────────────────────
+// ── Project form ──────────────────────────────────────────────────────────────
 function toDateInput(val) {
   if (!val) return ''
   return new Date(val).toISOString().split('T')[0]
@@ -623,10 +474,7 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
   const [fieldDefs,   setFieldDefs]   = useState(initial?.fieldDefs  ?? DEFAULT_FIELDS)
   const [assignments, setAssignments] = useState(() => {
     if (initial?.analysts?.length) {
-      return initial.analysts.map(pa => ({
-        analystId:   pa.analystId,
-        fieldValues: pa.fieldValues || {},
-      }))
+      return initial.analysts.map(pa => ({ analystId: pa.analystId, fieldValues: pa.fieldValues || {} }))
     }
     return []
   })
@@ -638,10 +486,6 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
     const id = newFieldLabel.toLowerCase().replace(/\s+/g, '_')
     setFieldDefs(prev => [...prev, { id, label: newFieldLabel.trim(), type: 'text' }])
     setNewFieldLabel('')
-  }
-
-  function removeField(id) {
-    setFieldDefs(prev => prev.filter(f => f.id !== id))
   }
 
   async function handleSave() {
@@ -693,34 +537,24 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
           <textarea rows={2} value={notes} onChange={e => setNotes(e.target.value)} />
         </div>
       </div>
-
-      {/* Field definitions */}
       <div className="section-label" style={{ marginBottom: 6 }}>Analyst fields</div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 8 }}>
         {fieldDefs.map(f => (
           <span key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', padding: '3px 8px', fontSize: 12 }}>
             {f.label}
-            <button onClick={() => removeField(f.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1, padding: 0 }}>✕</button>
+            <button onClick={() => setFieldDefs(prev => prev.filter(x => x.id !== f.id))}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 13, lineHeight: 1, padding: 0 }}>✕</button>
           </span>
         ))}
         <div style={{ display: 'flex', gap: 4 }}>
           <input value={newFieldLabel} onChange={e => setNewFieldLabel(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && addCustomField()}
-            placeholder="Add field…"
-            style={{ width: 120, padding: '3px 8px', fontSize: 12 }} />
+            placeholder="Add field…" style={{ width: 120, padding: '3px 8px', fontSize: 12 }} />
           <button className="btn btn-sm" onClick={addCustomField} disabled={!newFieldLabel.trim()}>+</button>
         </div>
       </div>
-
-      {/* Analyst assignments */}
       <div className="section-label" style={{ marginBottom: 6 }}>Analyst assignments</div>
-      <AssignmentEditor
-        assignments={assignments}
-        setAssignments={setAssignments}
-        analysts={analysts}
-        fieldDefs={fieldDefs}
-      />
-
+      <AssignmentEditor assignments={assignments} setAssignments={setAssignments} analysts={analysts} fieldDefs={fieldDefs} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
         <button className="btn" onClick={onCancel}>Cancel</button>
         <button className="btn btn-primary" onClick={handleSave} disabled={saving || !name.trim()}>
@@ -731,7 +565,7 @@ function ProjectForm({ initial, analysts, onSave, onCancel }) {
   )
 }
 
-// ── Assignment table (read-only view inside project card) ──────────────────────
+// ── Assignment table (read-only) ──────────────────────────────────────────────
 function AssignmentTable({ project, analysts }) {
   const fieldDefs = project.fieldDefs || DEFAULT_FIELDS
   const assignments = project.analysts || []
@@ -767,18 +601,16 @@ function AssignmentTable({ project, analysts }) {
 
 // ── Project milestones ────────────────────────────────────────────────────────
 function ProjectMilestones({ project, onUpdate, showToast }) {
-  const [milestones, setMilestones]   = useState(project.milestones || [])
-  const [adding,     setAdding]       = useState(false)
-  const [newTitle,   setNewTitle]     = useState('')
-  const [newDate,    setNewDate]      = useState('')
-  const [editingId,  setEditingId]    = useState(null)
-  const [editTitle,  setEditTitle]    = useState('')
-  const [editDate,   setEditDate]     = useState('')
+  const [milestones, setMilestones] = useState(project.milestones || [])
+  const [adding,     setAdding]     = useState(false)
+  const [newTitle,   setNewTitle]   = useState('')
+  const [newDate,    setNewDate]    = useState('')
+  const [editingId,  setEditingId]  = useState(null)
+  const [editTitle,  setEditTitle]  = useState('')
+  const [editDate,   setEditDate]   = useState('')
   const inputRef = useRef(null)
 
   useEffect(() => { if (adding) inputRef.current?.focus() }, [adding])
-
-  // keep local milestones in sync if project prop changes
   useEffect(() => { setMilestones(project.milestones || []) }, [project.milestones])
 
   const today = new Date().toISOString().slice(0, 10)
@@ -793,8 +625,7 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
       if (!res.ok) throw new Error('Failed to add milestone')
       const m = await res.json()
       const updated = [...milestones, m].sort((a, b) => (a.dueDate || '9') > (b.dueDate || '9') ? 1 : -1)
-      setMilestones(updated)
-      onUpdate(project.id, { milestones: updated })
+      setMilestones(updated); onUpdate(project.id, { milestones: updated })
       setNewTitle(''); setNewDate(''); setAdding(false)
     } catch (e) { showToast(e.message) }
   }
@@ -808,8 +639,7 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
       if (!res.ok) throw new Error('Failed to update')
       const updated = await res.json()
       const next = milestones.map(x => x.id === m.id ? updated : x)
-      setMilestones(next)
-      onUpdate(project.id, { milestones: next })
+      setMilestones(next); onUpdate(project.id, { milestones: next })
     } catch (e) { showToast(e.message) }
   }
 
@@ -821,11 +651,8 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
       })
       if (!res.ok) throw new Error('Failed to update')
       const updated = await res.json()
-      const next = milestones.map(x => x.id === m.id ? updated : x)
-        .sort((a, b) => (a.dueDate || '9') > (b.dueDate || '9') ? 1 : -1)
-      setMilestones(next)
-      onUpdate(project.id, { milestones: next })
-      setEditingId(null)
+      const next = milestones.map(x => x.id === m.id ? updated : x).sort((a, b) => (a.dueDate || '9') > (b.dueDate || '9') ? 1 : -1)
+      setMilestones(next); onUpdate(project.id, { milestones: next }); setEditingId(null)
     } catch (e) { showToast(e.message) }
   }
 
@@ -833,8 +660,7 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
     try {
       await fetch(`/api/projects/${project.id}/milestones/${m.id}`, { method: 'DELETE' })
       const next = milestones.filter(x => x.id !== m.id)
-      setMilestones(next)
-      onUpdate(project.id, { milestones: next })
+      setMilestones(next); onUpdate(project.id, { milestones: next })
     } catch (e) { showToast(e.message) }
   }
 
@@ -844,75 +670,50 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
     return new Date(y, mo - 1, day).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
 
-  const open     = milestones.filter(m => !m.done)
-  const done     = milestones.filter(m => m.done)
-  const overdue  = open.filter(m => m.dueDate && m.dueDate < today)
+  const open = milestones.filter(m => !m.done)
+  const done = milestones.filter(m => m.done)
+  const overdue = open.filter(m => m.dueDate && m.dueDate < today)
 
   return (
-    <div style={{ marginTop: 10 }}>
-      {milestones.length > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-          <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>
-            Milestones
-          </span>
-          {overdue.length > 0 && (
-            <span style={{ fontSize: 10, background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>
-              {overdue.length} overdue
-            </span>
-          )}
-          <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{done.length}/{milestones.length}</span>
-          <button
-            className="btn btn-ghost btn-sm"
-            style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px' }}
-            onClick={() => setAdding(a => !a)}
-          >+ Add</button>
-        </div>
-      )}
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-secondary)' }}>Milestones</span>
+        {overdue.length > 0 && (
+          <span style={{ fontSize: 10, background: '#fee2e2', color: '#dc2626', borderRadius: 4, padding: '1px 5px', fontWeight: 600 }}>{overdue.length} overdue</span>
+        )}
+        {milestones.length > 0 && <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>{done.length}/{milestones.length}</span>}
+        <button className="btn btn-ghost btn-sm"
+          style={{ marginLeft: 'auto', fontSize: 11, padding: '2px 6px' }}
+          onClick={() => setAdding(a => !a)}>+ Add</button>
+      </div>
 
-      {/* Add form */}
       {adding && (
         <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap' }}>
-          <input
-            ref={inputRef}
-            value={newTitle}
-            onChange={e => setNewTitle(e.target.value)}
+          <input ref={inputRef} value={newTitle} onChange={e => setNewTitle(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') addMilestone(); if (e.key === 'Escape') { setAdding(false); setNewTitle(''); setNewDate('') } }}
             placeholder="e.g. Submit first draft"
-            style={{ flex: '1 1 180px', padding: '4px 8px', fontSize: 12 }}
-          />
-          <input
-            type="date"
-            value={newDate}
-            onChange={e => setNewDate(e.target.value)}
-            style={{ width: 130, padding: '4px 6px', fontSize: 12 }}
-          />
+            style={{ flex: '1 1 180px', padding: '4px 8px', fontSize: 12 }} />
+          <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ width: 130, padding: '4px 6px', fontSize: 12 }} />
           <button className="btn btn-primary btn-sm" onClick={addMilestone} disabled={!newTitle.trim()}>Add</button>
           <button className="btn btn-sm" onClick={() => { setAdding(false); setNewTitle(''); setNewDate('') }}>✕</button>
         </div>
       )}
 
-      {/* Milestone list */}
       {milestones.length === 0 && !adding && (
-        <button
-          className="btn btn-ghost btn-sm"
-          style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: '0', marginBottom: 4 }}
-          onClick={() => setAdding(true)}
-        >+ Add a milestone</button>
+        <button className="btn btn-ghost btn-sm"
+          style={{ fontSize: 11, color: 'var(--text-tertiary)', padding: 0, marginBottom: 4 }}
+          onClick={() => setAdding(true)}>+ Add a milestone</button>
       )}
 
-      <div style={{ width: '100%' }}>
+      <div>
         {[...open, ...done].map(m => {
           const isOverdue = !m.done && m.dueDate && m.dueDate < today
           if (editingId === m.id) {
             return (
               <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: '4px 6px', padding: '4px 0', alignItems: 'center' }}>
-                <input
-                  value={editTitle}
-                  onChange={e => setEditTitle(e.target.value)}
+                <input value={editTitle} onChange={e => setEditTitle(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') saveEdit(m); if (e.key === 'Escape') setEditingId(null) }}
-                  style={{ padding: '3px 6px', fontSize: 12, gridColumn: '1' }}
-                  autoFocus
-                />
+                  style={{ padding: '3px 6px', fontSize: 12 }} autoFocus />
                 <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)} style={{ width: 120, padding: '3px 6px', fontSize: 12 }} />
                 <button className="btn btn-primary btn-sm" style={{ fontSize: 11 }} onClick={() => saveEdit(m)}>Save</button>
                 <button className="btn btn-sm" style={{ fontSize: 11 }} onClick={() => setEditingId(null)}>Cancel</button>
@@ -921,37 +722,19 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
           }
           return (
             <div key={m.id} style={{
-              display: 'grid',
-              gridTemplateColumns: '16px 1fr auto auto auto',
-              gap: '0 8px',
-              alignItems: 'center',
-              padding: '5px 0',
-              borderBottom: '0.5px solid var(--border-light)',
-              width: '100%',
+              display: 'grid', gridTemplateColumns: '16px 1fr auto auto auto', gap: '0 8px',
+              alignItems: 'center', padding: '5px 0', borderBottom: '0.5px solid var(--border-light)',
               opacity: m.done ? 0.55 : 1,
             }}>
               <input type="checkbox" checked={m.done} onChange={() => toggleDone(m)} style={{ cursor: 'pointer', margin: 0 }} />
-              <span style={{
-                fontSize: 12, lineHeight: 1.4, minWidth: 0,
-                wordBreak: 'break-word',
-                textDecoration: m.done ? 'line-through' : 'none',
-                color: m.done ? 'var(--text-tertiary)' : 'var(--text-primary)',
-              }}>
-                {m.title}
-              </span>
-              <span style={{
-                fontSize: 11, whiteSpace: 'nowrap',
-                color: isOverdue ? '#dc2626' : 'var(--text-tertiary)',
-                fontWeight: isOverdue ? 600 : 400,
-              }}>
+              <span style={{ fontSize: 12, lineHeight: 1.4, minWidth: 0, wordBreak: 'break-word', textDecoration: m.done ? 'line-through' : 'none', color: m.done ? 'var(--text-tertiary)' : 'var(--text-primary)' }}>{m.title}</span>
+              <span style={{ fontSize: 11, whiteSpace: 'nowrap', color: isOverdue ? '#dc2626' : 'var(--text-tertiary)', fontWeight: isOverdue ? 600 : 400 }}>
                 {m.dueDate ? `${isOverdue ? '⚠ ' : ''}${fmtDate(m.dueDate)}` : ''}
               </span>
               <button onClick={() => { setEditingId(m.id); setEditTitle(m.title); setEditDate(m.dueDate || '') }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, padding: '0 2px' }}
-                title="Edit">✏️</button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 11, opacity: 0.6, padding: '0 2px' }}>✏️</button>
               <button onClick={() => deleteMilestone(m)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.5, padding: '0 2px' }}
-                title="Delete">✕</button>
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-tertiary)', fontSize: 12, opacity: 0.5, padding: '0 2px' }}>✕</button>
             </div>
           )
         })}
@@ -962,11 +745,8 @@ function ProjectMilestones({ project, onUpdate, showToast }) {
 
 // ── Project edit modal ────────────────────────────────────────────────────────
 function ProjectEditModal({ project, analysts, onSave, onClose }) {
-  function handleOverlayClick(e) {
-    if (e.target === e.currentTarget) onClose()
-  }
   return (
-    <div className="modal-overlay" onClick={handleOverlayClick}>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose() }}>
       <div className="modal-box" style={{ maxWidth: 600 }}>
         <div className="modal-header">
           <div style={{ fontWeight: 600, fontSize: 15 }}>Edit project</div>
@@ -980,187 +760,264 @@ function ProjectEditModal({ project, analysts, onSave, onClose }) {
   )
 }
 
-// ── Status section (collapsible group of projects by status) ──────────────────
-function StatusSection({ status, projects, expanded, setExpanded, onEdit, confirmDelete, setConfirmDelete, analysts, handleDelete, handleNoteChange, onProjectUpdate, showToast, sectionCollapsed, onToggleSection }) {
-  if (projects.length === 0) return null
+// ── Board column header ───────────────────────────────────────────────────────
+function BoardColHeader() {
+  const cols = ['', 'Project', 'Type', 'People', 'Due', 'Milestones', 'Last update', '']
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: GRID,
+      padding: '0 12px', height: 32, alignItems: 'center',
+      background: 'var(--bg-secondary)',
+      borderBottom: '1px solid var(--border-light)',
+    }}>
+      {cols.map((h, i) => (
+        <div key={i} style={{
+          fontSize: 10, fontWeight: 700, color: 'var(--text-tertiary)',
+          textTransform: 'uppercase', letterSpacing: '0.5px',
+          overflow: 'hidden', whiteSpace: 'nowrap',
+        }}>{h}</div>
+      ))}
+    </div>
+  )
+}
+
+// ── Board section (Monday-style row group per status) ─────────────────────────
+function BoardSection({ status, projects, expanded, setExpanded, onEdit, confirmDelete, setConfirmDelete, analysts, handleDelete, handleNoteChange, onProjectUpdate, showToast, sectionCollapsed, onToggleSection, onAddNew }) {
+  const [hovered, setHovered] = useState(null)
+  const sc = STATUS_CONFIG[status] || STATUS_CONFIG.active
   const label = STATUS_LABELS[status] || status
-  const icon  = STATUS_ICONS[status]  || '📁'
+
+  if (projects.length === 0) return null
 
   return (
-    <div style={{ marginBottom: '1.25rem' }}>
-      {/* Section header */}
+    <div>
+      {/* Group header */}
       <div
         onClick={onToggleSection}
         style={{
-          display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-          padding: '7px 4px', userSelect: 'none', marginBottom: 6,
-          borderBottom: sectionCollapsed ? 'none' : '0.5px solid var(--border-light)',
-          paddingBottom: sectionCollapsed ? 7 : 10,
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '6px 12px 6px 10px',
+          borderBottom: '0.5px solid var(--border-light)',
+          cursor: 'pointer', userSelect: 'none',
+          background: sectionCollapsed ? 'transparent' : `${sc.color}09`,
         }}
       >
         <span style={{
-          fontSize: 10, color: 'var(--text-tertiary)', display: 'inline-block',
+          fontSize: 9, color: 'var(--text-tertiary)', display: 'inline-block',
           transition: 'transform .15s', transform: sectionCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
         }}>▾</span>
+        <span style={{ width: 10, height: 10, borderRadius: 2, background: sc.color, flexShrink: 0 }} />
+        <span style={{ fontSize: 13, fontWeight: 700, color: sc.color }}>{label}</span>
         <span style={{
-          width: 8, height: 8, borderRadius: '50%', display: 'inline-block', flexShrink: 0,
-          background: STATUS_CONFIG[status]?.color || 'var(--text-tertiary)',
-        }} />
-        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.1px' }}>{label}</span>
-        <span style={{
-          fontSize: 11, fontWeight: 700,
-          color: STATUS_CONFIG[status]?.color || 'var(--text-tertiary)',
-          background: STATUS_CONFIG[status]?.bg || 'var(--bg-secondary)',
-          padding: '1px 7px', borderRadius: 10,
+          fontSize: 11, fontWeight: 700, color: sc.color, background: sc.bg,
+          padding: '0px 7px', borderRadius: 10,
         }}>{projects.length}</span>
       </div>
 
       {!sectionCollapsed && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <>
           {projects.map(p => {
             const tc = TYPE_CONFIG[p.type] || TYPE_CONFIG.side
-            const sc = STATUS_CONFIG[p.status] || STATUS_CONFIG.active
+            const isExpanded = !!expanded[p.id]
             const milestoneCount = p.milestones?.length || 0
             const doneMilestones = p.milestones?.filter(m => m.done).length || 0
             const lastNote = p.projectNotes?.[0]
             const daysLeft = p.endDate ? Math.round((new Date(p.endDate) - new Date()) / 86400000) : null
+            const isHov = hovered === p.id
 
             return (
-              <div key={p.id} style={{
-                background: 'var(--bg-card)',
-                border: '0.5px solid var(--border-light)',
-                borderLeft: `3px solid ${tc.color}`,
-                borderRadius: 'var(--radius)',
-                padding: '11px 14px',
-              }}>
-                {/* Row 1: type chip · status pill · actions */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 7 }}>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.4px', textTransform: 'uppercase',
-                    color: tc.color, background: tc.bg, padding: '2px 6px', borderRadius: 3,
-                  }}>{tc.label}</span>
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.2px',
-                    color: sc.color, background: sc.bg, padding: '2px 8px', borderRadius: 10,
-                  }}>{sc.label}</span>
-                  <div style={{ marginLeft: 'auto', display: 'flex', gap: 2, alignItems: 'center' }}>
+              <div key={p.id}>
+                {/* Row */}
+                <div
+                  onMouseEnter={() => setHovered(p.id)}
+                  onMouseLeave={() => setHovered(null)}
+                  onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}
+                  style={{
+                    display: 'grid', gridTemplateColumns: GRID,
+                    alignItems: 'center', padding: '0 12px', height: 48,
+                    borderBottom: '0.5px solid var(--border-light)',
+                    borderLeft: `3px solid ${isExpanded ? tc.color : isHov ? tc.color + '55' : 'transparent'}`,
+                    background: isExpanded ? `${tc.color}07` : isHov ? 'var(--bg-secondary)' : 'transparent',
+                    cursor: 'pointer', transition: 'background 0.08s',
+                  }}
+                >
+                  {/* Chevron */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{
+                      fontSize: 9, color: 'var(--text-tertiary)', display: 'inline-block',
+                      transition: 'transform 0.15s', transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+                    }}>▾</span>
+                  </div>
+
+                  {/* Name + description */}
+                  <div style={{ minWidth: 0, paddingRight: 10 }}>
+                    <div style={{
+                      fontSize: 13, fontWeight: 600, color: 'var(--text-primary)',
+                      whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    }}>{p.name}</div>
+                    {p.notes && (
+                      <div style={{
+                        fontSize: 11, color: 'var(--text-tertiary)', marginTop: 1,
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>{p.notes}</div>
+                    )}
+                  </div>
+
+                  {/* Type */}
+                  <div>
+                    <span style={{
+                      fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px',
+                      color: tc.color, background: tc.bg, padding: '2px 7px', borderRadius: 3, whiteSpace: 'nowrap',
+                    }}>{tc.label}</span>
+                  </div>
+
+                  {/* People */}
+                  <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    {p.analysts?.slice(0, 4).map(pa => {
+                      const a = analysts.find(x => x.id === pa.analystId) || pa.analyst
+                      if (!a) return null
+                      const col = ANALYST_COLORS[(a.color || 0) % ANALYST_COLORS.length]
+                      return (
+                        <div key={pa.analystId} title={a.name} style={{
+                          width: 22, height: 22, borderRadius: '50%', background: col, color: '#fff',
+                          fontSize: 9, fontWeight: 700, flexShrink: 0,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          border: '1.5px solid var(--bg-primary)',
+                        }}>{a.initials}</div>
+                      )
+                    })}
+                    {(p.analysts?.length || 0) > 4 && (
+                      <div style={{
+                        width: 22, height: 22, borderRadius: '50%',
+                        background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
+                        fontSize: 9, fontWeight: 700,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>+{p.analysts.length - 4}</div>
+                    )}
+                    {(!p.analysts || p.analysts.length === 0) && (
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Due date */}
+                  <div>
+                    {p.endDate ? (
+                      <div>
+                        <div style={{
+                          fontSize: 12,
+                          color: daysLeft !== null && daysLeft <= 7 ? '#dc2626' : 'var(--text-secondary)',
+                          fontWeight: daysLeft !== null && daysLeft <= 7 ? 600 : 400,
+                        }}>
+                          {new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </div>
+                        {daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && (
+                          <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>{daysLeft}d left</div>
+                        )}
+                        {daysLeft !== null && daysLeft < 0 && (
+                          <div style={{ fontSize: 10, color: '#dc2626', fontWeight: 600 }}>Overdue</div>
+                        )}
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Milestones progress */}
+                  <div>
+                    {milestoneCount > 0 ? (
+                      <div>
+                        <div style={{
+                          fontSize: 11, fontWeight: 600, marginBottom: 4,
+                          color: doneMilestones === milestoneCount ? '#16a34a' : 'var(--text-secondary)',
+                        }}>{doneMilestones}/{milestoneCount}</div>
+                        <div style={{ height: 4, borderRadius: 2, background: 'var(--bg-tertiary)', width: 64 }}>
+                          <div style={{
+                            height: '100%', borderRadius: 2,
+                            background: doneMilestones === milestoneCount ? '#16a34a' : '#3b82f6',
+                            width: `${(doneMilestones / milestoneCount) * 100}%`,
+                            transition: 'width 0.3s',
+                          }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Last update */}
+                  <div style={{ minWidth: 0, paddingRight: 8 }}>
+                    {lastNote ? (
+                      <div style={{
+                        fontSize: 11, color: 'var(--text-secondary)',
+                        whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                      }}>{lastNote.text}</div>
+                    ) : (
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>—</span>
+                    )}
+                  </div>
+
+                  {/* Actions — appear on hover */}
+                  <div
+                    style={{ display: 'flex', gap: 2, alignItems: 'center', justifyContent: 'flex-end' }}
+                    onClick={e => e.stopPropagation()}
+                  >
                     <button className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 12, padding: '3px 8px' }}
-                      onClick={() => setExpanded(prev => ({ ...prev, [p.id]: !prev[p.id] }))}>
-                      {expanded[p.id] ? '▲ Less' : '▾ Details'}
-                    </button>
-                    <button className="btn btn-ghost btn-sm"
-                      style={{ fontSize: 13, padding: '3px 6px' }}
+                      style={{ fontSize: 13, padding: '3px 6px', opacity: isHov || confirmDelete === p.id ? 1 : 0, transition: 'opacity 0.1s' }}
                       onClick={() => onEdit(p)} title="Edit">✏️</button>
                     {confirmDelete === p.id ? (
                       <>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(p.id)}>Delete</button>
-                        <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                        <button className="btn btn-danger btn-sm" style={{ fontSize: 11, padding: '2px 5px' }} onClick={() => handleDelete(p.id)}>Del</button>
+                        <button className="btn btn-sm" style={{ fontSize: 11, padding: '2px 5px' }} onClick={() => setConfirmDelete(null)}>✕</button>
                       </>
                     ) : (
                       <button className="btn btn-ghost btn-sm"
-                        style={{ color: 'var(--text-tertiary)', fontSize: 15, padding: '3px 6px', opacity: 0.5 }}
+                        style={{ fontSize: 14, padding: '3px 6px', opacity: isHov ? 0.45 : 0, transition: 'opacity 0.1s', color: 'var(--text-tertiary)' }}
                         onClick={() => setConfirmDelete(p.id)} title="Delete">✕</button>
                     )}
                   </div>
                 </div>
 
-                {/* Row 2: project name */}
-                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.3, marginBottom: 7 }}>
-                  {p.name}
-                </div>
-
-                {/* Row 3: analyst avatars + dates */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                  {p.analysts?.length > 0 && (
-                    <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                      {p.analysts.slice(0, 7).map(pa => {
-                        const a = analysts.find(x => x.id === pa.analystId) || pa.analyst
-                        if (!a) return null
-                        const color = ANALYST_COLORS[(a.color || 0) % ANALYST_COLORS.length]
-                        return (
-                          <div key={pa.analystId} title={a.name} style={{
-                            width: 22, height: 22, borderRadius: '50%',
-                            background: color, color: '#fff',
-                            fontSize: 9, fontWeight: 700,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            border: '1.5px solid var(--bg-card)',
-                          }}>{a.initials}</div>
-                        )
-                      })}
-                      {p.analysts.length > 7 && (
-                        <div style={{
-                          width: 22, height: 22, borderRadius: '50%',
-                          background: 'var(--bg-tertiary)', color: 'var(--text-secondary)',
-                          fontSize: 9, fontWeight: 700,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>+{p.analysts.length - 7}</div>
-                      )}
-                    </div>
-                  )}
-                  {(p.startDate || p.endDate) && (
-                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)' }}>
-                      <span>📅</span>
-                      {p.startDate && <span>{new Date(p.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>}
-                      {p.startDate && p.endDate && <span>→</span>}
-                      {p.endDate && <span style={{ color: daysLeft !== null && daysLeft < 7 && daysLeft >= 0 ? '#dc2626' : 'inherit' }}>
-                        {new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>}
-                      {daysLeft !== null && daysLeft >= 0 && daysLeft <= 14 && (
-                        <span style={{ color: '#dc2626', fontWeight: 600 }}>· {daysLeft}d left</span>
-                      )}
-                      {daysLeft !== null && daysLeft < 0 && (
-                        <span style={{ color: '#dc2626', fontWeight: 600 }}>· Overdue</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* Row 4: description (1 line, truncated) */}
-                {p.notes && (
+                {/* Expanded detail panel */}
+                {isExpanded && (
                   <div style={{
-                    fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    lineHeight: 1.4,
-                  }}>{p.notes}</div>
-                )}
-
-                {/* Bottom summary strip (collapsed only) */}
-                {!expanded[p.id] && (milestoneCount > 0 || lastNote) && (
-                  <div style={{
-                    display: 'flex', gap: 12, alignItems: 'center',
-                    paddingTop: 7, marginTop: 4,
-                    borderTop: '0.5px solid var(--border-light)',
-                    fontSize: 11, color: 'var(--text-tertiary)',
+                    borderBottom: '0.5px solid var(--border-light)',
+                    borderLeft: `3px solid ${tc.color}`,
+                    background: 'var(--bg-secondary)',
+                    padding: '16px 20px 16px 44px',
                   }}>
-                    {milestoneCount > 0 && (
-                      <span style={{
-                        fontWeight: 600, whiteSpace: 'nowrap',
-                        color: doneMilestones === milestoneCount ? '#16a34a' : 'var(--text-tertiary)',
-                      }}>
-                        ✓ {doneMilestones}/{milestoneCount}
-                      </span>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 32px', alignItems: 'start' }}>
+                      <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
+                      <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} />
+                    </div>
+                    {p.analysts?.length > 0 && (
+                      <div style={{ marginTop: 14 }}>
+                        <AssignmentTable project={p} analysts={analysts} />
+                      </div>
                     )}
-                    {lastNote && (
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
-                        💬 {lastNote.text.slice(0, 90)}
-                      </span>
-                    )}
-                  </div>
-                )}
-
-                {/* Expanded: milestones + updates + assignments */}
-                {expanded[p.id] && (
-                  <div style={{ borderTop: '0.5px solid var(--border-light)', marginTop: 8, paddingTop: 8 }}>
-                    <ProjectMilestones project={p} onUpdate={onProjectUpdate} showToast={showToast} />
-                    <ProjectUpdates project={p} onNoteAdded={handleNoteChange} showToast={showToast} analysts={analysts} />
-                    <AssignmentTable project={p} analysts={analysts} />
                   </div>
                 )}
               </div>
             )
           })}
-        </div>
+
+          {/* New item row */}
+          <div
+            style={{
+              display: 'grid', gridTemplateColumns: GRID,
+              padding: '0 12px', height: 34, alignItems: 'center',
+              borderBottom: '0.5px solid var(--border-light)',
+            }}
+          >
+            <div />
+            <button
+              onClick={onAddNew}
+              style={{
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 12, color: 'var(--text-tertiary)', textAlign: 'left', padding: 0,
+              }}
+            >+ New item</button>
+          </div>
+        </>
       )}
     </div>
   )
@@ -1172,11 +1029,10 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
   const [editing,          setEditing]          = useState(null)
   const [confirmDelete,    setConfirmDelete]     = useState(null)
   const [expanded,         setExpanded]         = useState({})
-  const [sectionCollapsed, setSectionCollapsed] = useState({ done: true, hold: false })
+  const [sectionCollapsed, setSectionCollapsed] = useState({ done: true })
   const [showChat,         setShowChat]         = useState(false)
   const [slackSuggestions, setSlackSuggestions] = useState([])
 
-  // Load Slack suggestions on mount
   useEffect(() => {
     fetch('/api/projects/suggestions')
       .then(r => r.json())
@@ -1184,7 +1040,6 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
       .catch(() => {})
   }, [])
 
-  // Re-fetch all projects (called after chat actions)
   const refreshProjects = useCallback(async () => {
     try {
       const res = await fetch('/api/projects')
@@ -1192,18 +1047,14 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
     } catch {}
   }, [setProjects])
 
-  // Called when milestones change on a project
   const handleProjectUpdate = useCallback((projectId, patch) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...patch } : p))
   }, [setProjects])
 
-  // Called when a note is added (note = new note object) or deleted (note = null, noteId provided)
   const handleNoteChange = useCallback((projectId, note, deletedNoteId) => {
     setProjects(prev => prev.map(p => {
       if (p.id !== projectId) return p
-      if (deletedNoteId) {
-        return { ...p, projectNotes: (p.projectNotes || []).filter(n => n.id !== deletedNoteId) }
-      }
+      if (deletedNoteId) return { ...p, projectNotes: (p.projectNotes || []).filter(n => n.id !== deletedNoteId) }
       return { ...p, projectNotes: [note, ...(p.projectNotes || [])] }
     }))
   }, [setProjects])
@@ -1261,7 +1112,6 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         await refreshProjects()
         showToast(`Status updated to ${s.suggestedStatus}`)
       } else if (s.type === 'new') {
-        // Open the form — user can review before creating
         setShowForm(true)
         setSlackSuggestions(prev => prev.filter(x => x !== s))
         showToast('Fill in the new project details below')
@@ -1278,8 +1128,20 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
 
   if (loading) return <div className="empty-state">Loading…</div>
 
+  const boardSectionProps = {
+    expanded, setExpanded,
+    onEdit: p => setEditing(p),
+    confirmDelete, setConfirmDelete,
+    analysts,
+    handleDelete, handleNoteChange,
+    onProjectUpdate: handleProjectUpdate,
+    showToast,
+    onAddNew: () => setShowForm(true),
+  }
+
   return (
     <div>
+      {/* Header */}
       <div className="tab-header">
         <div className="tab-title">Projects</div>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -1291,7 +1153,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         </div>
       </div>
 
-      {/* Slack suggestions banner */}
+      {/* Slack suggestions */}
       {slackSuggestions.length > 0 && (
         <SlackSuggestionsBanner
           suggestions={slackSuggestions}
@@ -1307,6 +1169,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         />
       )}
 
+      {/* New project form */}
       {showForm && (
         <div className="card" style={{ marginBottom: '1rem' }}>
           <div className="section-label" style={{ marginBottom: 12 }}>New project</div>
@@ -1314,6 +1177,7 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         </div>
       )}
 
+      {/* Empty state */}
       {projects.length === 0 && !showForm && (
         <div className="empty-state">
           <div className="empty-state-icon">📂</div>
@@ -1321,70 +1185,53 @@ export default function ProjectsTab({ projects, setProjects, analysts, loading, 
         </div>
       )}
 
-      {STATUS_ORDER.map(status => {
-        const group = projects.filter(p => (p.status || 'active') === status)
-        return (
-          <StatusSection
-            key={status}
-            status={status}
-            projects={group}
-            expanded={expanded}
-            setExpanded={setExpanded}
-            onEdit={p => setEditing(p)}
-            confirmDelete={confirmDelete}
-            setConfirmDelete={setConfirmDelete}
-            analysts={analysts}
-            handleDelete={handleDelete}
-            handleNoteChange={handleNoteChange}
-            onProjectUpdate={handleProjectUpdate}
-            showToast={showToast}
-            sectionCollapsed={!!sectionCollapsed[status]}
-            onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, [status]: !prev[status] }))}
-          />
-        )
-      })}
-
-      {/* Any unknown statuses not in STATUS_ORDER */}
-      {(() => {
-        const known = new Set(STATUS_ORDER)
-        const unknown = projects.filter(p => p.status && !known.has(p.status))
-        if (!unknown.length) return null
-        return (
-          <StatusSection
-            status="other"
-            projects={unknown}
-            expanded={expanded}
-            setExpanded={setExpanded}
-            onEdit={p => setEditing(p)}
-            confirmDelete={confirmDelete}
-            setConfirmDelete={setConfirmDelete}
-            analysts={analysts}
-            handleDelete={handleDelete}
-            handleNoteChange={handleNoteChange}
-            onProjectUpdate={handleProjectUpdate}
-            showToast={showToast}
-            sectionCollapsed={!!sectionCollapsed['other']}
-            onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, other: !prev.other }))}
-          />
-        )
-      })()}
+      {/* Board */}
+      {projects.length > 0 && (
+        <div style={{
+          border: '0.5px solid var(--border-light)',
+          borderRadius: 'var(--radius)',
+          overflow: 'hidden',
+        }}>
+          <BoardColHeader />
+          {STATUS_ORDER.map(status => {
+            const group = projects.filter(p => (p.status || 'active') === status)
+            return (
+              <BoardSection
+                key={status}
+                status={status}
+                projects={group}
+                sectionCollapsed={!!sectionCollapsed[status]}
+                onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, [status]: !prev[status] }))}
+                {...boardSectionProps}
+              />
+            )
+          })}
+          {/* Unknown statuses */}
+          {(() => {
+            const known = new Set(STATUS_ORDER)
+            const unknown = projects.filter(p => p.status && !known.has(p.status))
+            if (!unknown.length) return null
+            return (
+              <BoardSection
+                status="other"
+                projects={unknown}
+                sectionCollapsed={!!sectionCollapsed['other']}
+                onToggleSection={() => setSectionCollapsed(prev => ({ ...prev, other: !prev.other }))}
+                {...boardSectionProps}
+              />
+            )
+          })()}
+        </div>
+      )}
 
       {/* Edit modal */}
       {editing && (
-        <ProjectEditModal
-          project={editing}
-          analysts={analysts}
-          onSave={handleUpdate}
-          onClose={() => setEditing(null)}
-        />
+        <ProjectEditModal project={editing} analysts={analysts} onSave={handleUpdate} onClose={() => setEditing(null)} />
       )}
 
       {/* Chat panel */}
       {showChat && (
-        <ProjectChatPanel
-          onClose={() => setShowChat(false)}
-          onProjectsChanged={refreshProjects}
-        />
+        <ProjectChatPanel onClose={() => setShowChat(false)} onProjectsChanged={refreshProjects} />
       )}
     </div>
   )
