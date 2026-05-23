@@ -18,7 +18,7 @@ function Sparkline({ history }) {
   const toSVG = p => `${p.x},${H - p.y * (H - 2) - 1}`
   const d = `M ${resolved.map(toSVG).join(' L ')}`
   const lastMood = history.filter(h => h.mood).at(-1)?.mood
-  const color = lastMood === 'h' ? '#1D9E75' : lastMood === 'l' ? '#E24B4A' : '#4A90D9'
+  const color = lastMood === 'h' ? '#1D9E75' : lastMood === 'l' ? '#D94040' : '#9B9388'
 
   return (
     <svg width={W} height={H} style={{ display: 'block', overflow: 'visible' }}>
@@ -62,17 +62,25 @@ function AnalystMiniCard({ analyst, onClick }) {
         {analyst.initials}
       </div>
 
-      {/* Name + project */}
+      {/* Name + role + task */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 6 }}>
           {analyst.name}
           {notSeen && <span title={`Last note: ${lastSeen}`} style={{ fontSize: 10, color: 'var(--accent-amber)', fontWeight: 500 }}>• {lastSeen}</span>}
         </div>
-        {analyst.currentProject && (
-          <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
-            {analyst.currentProject}
-          </div>
-        )}
+        <div style={{ fontSize: 11, color: 'var(--text-tertiary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: 1 }}>
+          {analyst.role || ''}
+          {(analyst.todayTask || analyst.tomorrowTask) && (
+            <span style={{ color: 'var(--text-tertiary)' }}>
+              {analyst.role ? ' · ' : ''}
+              {analyst.todayTask
+                ? analyst.todayTask
+                : <span style={{ fontStyle: 'italic' }}>Tomorrow: {analyst.tomorrowTask}</span>
+              }
+            </span>
+          )}
+          {!analyst.role && !analyst.todayTask && !analyst.tomorrowTask && <span>—</span>}
+        </div>
       </div>
 
       {/* Sparkline */}
@@ -188,7 +196,7 @@ export default function DashboardTab({ settings, onNavigate, analysts: propAnaly
         borderBottom: '1px solid var(--border-light)',
         marginBottom: 20,
       }}>
-        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>
+        <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>
           {greeting}, {name}
         </div>
         <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 3 }}>{dateStr}</div>

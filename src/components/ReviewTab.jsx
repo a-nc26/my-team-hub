@@ -82,7 +82,7 @@ export default function ReviewTab({ analysts, projects, settings, showToast }) {
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Weekly Review</div>
+          <div style={{ fontFamily: 'var(--font-serif)', fontSize: 26, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '0.01em' }}>Weekly Review</div>
           <div style={{ fontSize: 13, color: 'var(--text-tertiary)', marginTop: 2 }}>AI-generated summaries of each week</div>
         </div>
         <button

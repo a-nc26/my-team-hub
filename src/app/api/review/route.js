@@ -39,8 +39,8 @@ export async function POST(req) {
         orderBy: { createdAt: 'asc' },
       }),
       prisma.todo.findMany({
-        where: { updatedAt: { gte: start, lt: end } },
-        orderBy: { updatedAt: 'desc' },
+        where: { createdAt: { gte: start, lt: end } },
+        orderBy: { createdAt: 'desc' },
       }),
       prisma.meeting.findMany({
         where: { date: { gte: start.toISOString().slice(0,10), lte: end.toISOString().slice(0,10) } },

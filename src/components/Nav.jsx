@@ -16,7 +16,7 @@ export default function Nav({ activeTab, setActiveTab, hasAttention, settings, o
 
   return (
     <nav className="nav">
-      <span className="nav-brand">My Team Hub</span>
+      <span className="nav-brand">Alice</span>
       {tabs.map(t => (
         <button key={t.id} className={`nav-tab${activeTab === t.id ? ' active' : ''}`} onClick={() => setActiveTab(t.id)}>
           {t.label}

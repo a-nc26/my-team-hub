@@ -11,7 +11,14 @@ export async function GET() {
     const sevenDaysAgo = new Date(now)
     sevenDaysAgo.setDate(now.getDate() - 7)
 
-    const [analysts, projects, todos, recentNotes, projectNotes] = await Promise.all([
+    // Local-time date strings (matching how dailyTask.forDate is stored)
+    const localDate = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const todayStr    = localDate(now)
+    const tomorrowD   = new Date(now); tomorrowD.setDate(now.getDate() + 1)
+    const tomorrowStr = localDate(tomorrowD)
+
+    const [analysts, projects, todos, recentNotes, projectNotes, dailyTasks] = await Promise.all([
       prisma.analyst.findMany({
         where: { pending: false },
         include: {
@@ -42,6 +49,12 @@ export async function GET() {
         where: { createdAt: { gte: sevenDaysAgo } },
         select: { projectId: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
+      }),
+      // Today + tomorrow daily tasks for analyst cards
+      prisma.dailyTask.findMany({
+        where: { forDate: { in: [todayStr, tomorrowStr] } },
+        select: { analystId: true, task: true, forDate: true, status: true },
+        orderBy: { createdAt: 'asc' },
       }),
     ])
 
@@ -98,17 +111,22 @@ export async function GET() {
     }
 
     // Enrich analysts
-    const enrichedAnalysts = analysts.map(a => ({
-      id:            a.id,
-      name:          a.name,
-      initials:      a.initials,
-      role:          a.role,
-      color:         a.color,
-      mood:          a.mood,
-      moodHistory:   moodHistory[a.id] || [],
-      daysSinceNote: daysSince(lastNoteDate[a.id]),
-      currentProject: a.projects[0]?.project?.name || null,
-    }))
+    const enrichedAnalysts = analysts.map(a => {
+      const todayTask    = dailyTasks.find(t => t.analystId === a.id && t.forDate === todayStr    && t.status !== 'done')?.task || null
+      const tomorrowTask = dailyTasks.find(t => t.analystId === a.id && t.forDate === tomorrowStr && t.status !== 'done')?.task || null
+      return {
+        id:            a.id,
+        name:          a.name,
+        initials:      a.initials,
+        role:          a.role,
+        color:         a.color,
+        mood:          a.mood,
+        moodHistory:   moodHistory[a.id] || [],
+        daysSinceNote: daysSince(lastNoteDate[a.id]),
+        todayTask,
+        tomorrowTask,
+      }
+    })
 
     // Enrich projects
     const enrichedProjects = projects.map(p => ({

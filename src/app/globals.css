@@ -1,45 +1,66 @@
 :root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8f8f7;
-  --bg-tertiary: #f0efec;
-  --text-primary: #1a1a18;
-  --text-secondary: #6b6b67;
-  --text-tertiary: #9b9b96;
-  --border-light: rgba(0,0,0,0.08);
-  --border-medium: rgba(0,0,0,0.15);
-  --border-strong: rgba(0,0,0,0.28);
-  --accent-blue: #4A90D9;
-  --accent-blue-bg: #E6F1FB;
-  --accent-blue-text: #185FA5;
+  /* Backgrounds — warm cream palette */
+  --bg-primary: #FFFCF8;
+  --bg-secondary: #F5F0E6;
+  --bg-tertiary: #EDE8DC;
+
+  /* Text */
+  --text-primary: #1A1714;
+  --text-secondary: #6B6358;
+  --text-tertiary: #9B9388;
+
+  /* Borders */
+  --border-light: rgba(0,0,0,0.07);
+  --border-medium: rgba(0,0,0,0.13);
+  --border-strong: rgba(0,0,0,0.26);
+
+  /* Primary — Alice hot pink */
+  --accent-blue: #C94B78;
+  --accent-blue-bg: #FAE8F0;
+  --accent-blue-text: #8C1F46;
+
+  /* Teal — kept as success/health */
   --accent-green: #1D9E75;
   --accent-green-bg: #E1F5EE;
   --accent-green-text: #0F6E56;
-  --accent-amber: #EF9F27;
-  --accent-amber-bg: #FAEEDA;
-  --accent-amber-text: #854F0B;
-  --accent-red: #E24B4A;
+
+  /* Gold */
+  --accent-amber: #C49230;
+  --accent-amber-bg: #FAF0DC;
+  --accent-amber-text: #7A5810;
+
+  /* Danger */
+  --accent-red: #D94040;
   --accent-red-bg: #FCEBEB;
   --accent-red-text: #A32D2D;
+
+  /* Typography */
+  --font-serif: 'Cormorant Garamond', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.09);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #1c1c1a;
-    --bg-secondary: #252523;
-    --bg-tertiary: #2e2e2b;
-    --text-primary: #f0efe8;
-    --text-secondary: #9b9b96;
-    --text-tertiary: #6b6b67;
+    --bg-primary: #1E1B17;
+    --bg-secondary: #252118;
+    --bg-tertiary: #2E2A20;
+    --text-primary: #F0EDE4;
+    --text-secondary: #9B9388;
+    --text-tertiary: #6B6358;
     --border-light: rgba(255,255,255,0.07);
     --border-medium: rgba(255,255,255,0.13);
     --border-strong: rgba(255,255,255,0.22);
-    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+    --accent-blue: #D4607E;
+    --accent-blue-bg: #3A1A26;
+    --accent-blue-text: #F0A0BC;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.35);
+    --shadow-md: 0 4px 14px rgba(0,0,0,0.45);
   }
 }
 
@@ -47,7 +68,7 @@
 
 html, body {
   height: 100%;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.6;
   background: var(--bg-secondary);
@@ -71,11 +92,13 @@ html, body {
 }
 
 .nav-brand {
-  font-weight: 700;
-  font-size: 15px;
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 18px;
   margin-right: 1.5rem;
   color: var(--text-primary);
-  letter-spacing: -0.3px;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .nav-tab {
@@ -221,7 +244,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
   justify-content: space-between;
   margin-bottom: 1.25rem;
 }
-.team-title { font-size: 18px; font-weight: 700; }
+.team-title { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: 0.01em; }
 
 .team-stats { display: flex; gap: 1rem; align-items: center; }
 .stat { font-size: 13px; display: flex; align-items: center; gap: 4px; }
@@ -260,7 +283,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
   pointer-events: none;
 }
 .mood-dot.filled-green  { background: var(--accent-green); }
-.mood-dot.filled-blue   { background: var(--accent-blue); }
+.mood-dot.filled-blue   { background: var(--accent-amber); }
 .mood-dot.filled-red    { background: var(--accent-red); }
 
 .card-note-preview {
@@ -299,7 +322,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
   font-size: 13px;
 }
 .note-item.mood-h { border-color: var(--accent-green); }
-.note-item.mood-m { border-color: var(--accent-blue); }
+.note-item.mood-m { border-color: var(--accent-amber); }
 .note-item.mood-l { border-color: var(--accent-red); }
 .note-meta { font-size: 11px; color: var(--text-tertiary); margin-bottom: 3px; display: flex; gap: 6px; }
 
@@ -314,7 +337,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
   display: flex; align-items: center;
   justify-content: space-between; margin-bottom: 1.25rem;
 }
-.tab-title { font-size: 18px; font-weight: 700; }
+.tab-title { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: 0.01em; }
 
 .projects-list { display: flex; flex-direction: column; gap: 10px; }
 .project-card { display: flex; align-items: flex-start; gap: 12px; }
@@ -411,7 +434,7 @@ label { font-size: 12px; color: var(--text-secondary); display: block; margin-bo
 /* ─── AI Coach ───────────────────────────── */
 .ai-coach { max-width: 680px; margin: 0 auto; }
 .ai-header { margin-bottom: 1rem; }
-.ai-title { font-size: 18px; font-weight: 700; }
+.ai-title { font-family: var(--font-serif); font-size: 22px; font-weight: 600; letter-spacing: 0.01em; }
 .ai-subtitle { font-size: 13px; color: var(--text-secondary); }
 
 .chat-window {
