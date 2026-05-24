@@ -16,7 +16,7 @@ const inter = Inter({
 })
 
 export const metadata = {
-  title: 'Alice',
+  title: 'My Team',
   description: 'Team management dashboard',
 }
 
